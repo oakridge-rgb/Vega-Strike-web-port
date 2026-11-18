@@ -100,6 +100,16 @@ prototype and the JS build (negative outputs → broken spawns) until both
 sides were switched to the canonical `Math.imul` mulberry32 and verified
 sequence-identical.
 
+## Next-step investigation (2026-11-18)
+
+The technical feasibility report on upgrading this port with the original GPL
+engine (WebAssembly), original assets and original mechanics lives in
+[`docs/feasibility-report.pdf`](docs/feasibility-report.pdf), with a summary in
+[`docs/feasibility-report.md`](docs/feasibility-report.md). Verdict: a staged
+plan — asset and mechanics authenticity now inside the existing JS game,
+time-boxed WASM spikes with explicit go/no-go gates, and full engine bring-up
+only on evidence. The current port remains the shipped product throughout.
+
 ## Sources
 
 - Engine (GPL): https://github.com/vegastrike/Vega-Strike-Engine-Source

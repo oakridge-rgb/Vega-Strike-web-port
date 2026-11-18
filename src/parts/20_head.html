@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vega Strike - Web Port</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23020408'/%3E%3Cpath d='M8 2 L13 13 L10.5 13 L8 7 L5.5 13 L3 13 Z' fill='%23ffb400'/%3E%3C/svg%3E">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #020408; overflow: hidden; }
+  body {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: "Lucida Console", Monaco, monospace;
+  }
+  #wrap { width: min(97vw, calc(94vh * 800 / 600)); }
+  canvas#game {
+    width: 100%;
+    aspect-ratio: 800 / 600;
+    display: block;
+    image-rendering: pixelated;
+    background: #020208;
+    border: 2px solid #3a4468;
+    cursor: default;
+  }
+  #caption {
+    color: #5a6488; font-size: 11px; margin-top: 6px; text-align: center; letter-spacing: .2px;
+  }
+  #caption b { color: #ffb400; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="800" height="600"></canvas>
+  <div id="caption"><b>Vega Strike</b> web port - tribute to the GPL space sim &middot; engine &amp; assets: vegastrike (GPL) &middot; this reconstruction uses no original engine code &middot; <b>H</b>elp &middot; <b>M</b>ap</div>
+</div>
+<script>
+window.__errs = [];
+window.onerror = function(m, s, l, c) { window.__errs.push(m + " @" + l + ":" + c); return false; };
+</script>
+<script>
