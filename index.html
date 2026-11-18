@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vega Strike - Web Port</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23020408'/%3E%3Cpath d='M8 2 L13 13 L10.5 13 L8 7 L5.5 13 L3 13 Z' fill='%23ffb400'/%3E%3C/svg%3E">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #020408; overflow: hidden; }
+  body {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: "Lucida Console", Monaco, monospace;
+  }
+  #wrap { width: min(97vw, calc(94vh * 800 / 600)); }
+  canvas#game {
+    width: 100%;
+    aspect-ratio: 800 / 600;
+    display: block;
+    image-rendering: pixelated;
+    background: #020208;
+    border: 2px solid #3a4468;
+    cursor: default;
+  }
+  #caption {
+    color: #5a6488; font-size: 11px; margin-top: 6px; text-align: center; letter-spacing: .2px;
+  }
+  #caption b { color: #ffb400; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="800" height="600"></canvas>
+  <div id="caption"><b>Vega Strike</b> web port - tribute to the GPL space sim &middot; engine &amp; assets: vegastrike (GPL) &middot; this reconstruction uses no original engine code &middot; <b>H</b>elp &middot; <b>M</b>ap</div>
+</div>
+<script>
+window.__errs = [];
+window.onerror = function(m, s, l, c) { window.__errs.push(m + " @" + l + ":" + c); return false; };
+</script>
+<script>
+// Vega Strike web port - universe data
+// Derived from vegastrike/Assets-Production (GPL): units.csv, master_part_list.csv,
+// and .system files (gemini_sector cluster around New Constantinople).
+// Base placement fill, market variation and pirate presence are documented reconstructions.
+const VS_DATA = {"systems":[{"name":"newconstantinople","sector":"gemini_sector","star":{"name":"newconstantinople","r":10.0,"x":14.594814,"y":0.0,"z":-14.594814,"tex":"sol/sun.png"},"planets":[{"name":"Edom","r":1,"x":-0.0065,"y":0.0,"z":-0.008,"tex":"planets/m_class3.png"},{"name":"Edom Atmosphere","r":1,"x":0.0,"y":0.0,"z":0.0,"tex":"sol/earthcloudmaptrans.png"}],"bases":[{"name":"Commerce Center","type":"commerce_center","faction":"confed","x":0.0,"y":0.0,"z":0.0,"authentic":true},{"name":"Agricultural Station","type":"agricultural_station","faction":"confed","x":-166.03885593358427,"y":-195.92895614914596,"z":-191.75331639125943,"authentic":false},{"name":"Factory Station","type":"factory","faction":"confed","x":-42.56395692937076,"y":22.085420321673155,"z":-31.93662806879729,"authentic":false}],"jumps":[{"name":"JumpTo44-P-IM","dest":"44-p-im","x":-151.7156721906906,"y":12.547297105193138,"z":-375.50946034917274},{"name":"JumpToAldebran","dest":"aldebran","x":328.75886124228487,"y":-14.108032984659076,"z":-213.49850386987742},{"name":"JumpToJunction","dest":"junction","x":-27.69332217733947,"y":43.181101782247424,"z":-396.03292780623946},{"name":"JumpToNewDetroit","dest":"newdetroit","x":-247.94778870525744,"y":-37.09985171444714,"z":329.03783076748635},{"name":"JumpToNewcastle","dest":"newcastle","x":-285.5778999864514,"y":9.646286638453603,"z":275.77937384679143},{"name":"JumpToVarnus","dest":"varnus","x":283.76523645516215,"y":-56.98357377201319,"z":264.6153634609032},{"name":"JumpToXXN-1927","dest":"xxn-1927","x":-347.0881413569354,"y":1.371266283094883,"z":36.48043488485319}]},{"name":"newdetroit","sector":"gemini_sector","star":{"name":"newdetroit","r":10.0,"x":14.594814,"y":0.0,"z":-14.594814,"tex":"sol/sun.png"},"planets":[{"name":"NewDetroit","r":1,"x":-0.013,"y":0.0,"z":-0.003,"tex":"planets/newdetroit.png"},{"name":"NewDetroit Atmosphere","r":1,"x":0.0,"y":0.0,"z":0.0,"tex":"sol/dirtyatmos.png"}],"bases":[{"name":"Mining Base","type":"miningbase","faction":"confed","x":-149.0685543511063,"y":60.69083767943084,"z":106.66793873533607,"authentic":false},{"name":"Agricultural Station","type":"agricultural_station","faction":"confed","x":312.0041797403246,"y":5.5060002487152815,"z":-13.028988800942898,"authentic":false},{"name":"Factory Station","type":"factory","faction":"confed","x":-141.49877037853003,"y":49.35109755024314,"z":-200.64646410755813,"authentic":false}],"jumps":[{"name":"JumpToManchester","dest":"manchester","x":196.60004513556692,"y":49.87064503133297,"z":-314.62584485813153},{"name":"JumpToND-57","dest":"nd-57","x":6.876248835514736,"y":1.8450609594583511,"z":393.9399918794131},{"name":"JumpToNewConstantinople","dest":"newconstantinople","x":-378.83665570354935,"y":-3.344472348690033,"z":-176.6544318587858},{"name":"JumpToPerry","dest":"perry","x":-109.78846534581021,"y":-14.545049713924527,"z":301.64133151312643},{"name":"JumpToRaxis","dest":"raxis","x":400.9886452699675,"y":27.770953914150596,"z":49.23521467970034},{"name":"JumpToRikel","dest":"rikel","x":-367.0946887377745,"y":13.388213776051998,"z":-187.04408437723026},{"name":"JumpToSaxtogue","dest":"saxtogue","x":36.480431769916635,"y":27.478781724348664,"z":-347.08814168432843},{"name":"JumpToXXN-1927","dest":"xxn-1927","x":348.14985354262075,"y":55.54229007102549,"z":24.34500930892671}]},{"name":"perry","sector":"gemini_sector","star":{"name":"perry","r":10.0,"x":14.594814,"y":0.0,"z":-14.594814,"tex":"sol/sun.png"},"planets":[],"bases":[{"name":"Refinery","type":"refinery","faction":"confed","x":188.2619678042829,"y":156.65676100179553,"z":-178.52086289785802,"authentic":true},{"name":"Star Fortress","type":"starfortress","faction":"confed","x":-252.11567161604762,"y":-21.966028586030006,"z":-21.80059631355107,"authentic":true},{"name":"Factory Station","type":"factory","faction":"confed","x":329.7096901573241,"y":199.13735333830118,"z":-305.76956735458225,"authentic":false}],"jumps":[{"name":"JumpToNewDetroit","dest":"newdetroit","x":-99.67182302804046,"y":35.51768613047898,"z":-399.7618387168377},{"name":"JumpToNewcastle","dest":"newcastle","x":75.75116898055045,"y":52.43389732204378,"z":-389.7059922532371}]},{"name":"newcastle","sector":"gemini_sector","star":{"name":"newcastle","r":10.0,"x":14.594814,"y":0.0,"z":-14.594814,"tex":"sol/sun.png"},"planets":[],"bases":[{"name":"Refinery","type":"refinery","faction":"confed","x":189.24721274524927,"y":122.23501335829496,"z":289.27236101590097,"authentic":true},{"name":"Agricultural Station","type":"agricultural_station","faction":"confed","x":-151.53765454888344,"y":99.95802200865,"z":-251.73929380252957,"authentic":false},{"name":"Factory Station","type":"factory","faction":"confed","x":-127.90832710452378,"y":-122.55450244992971,"z":347.19849636312574,"authentic":false}],"jumps":[{"name":"JumpToNewConstantinople","dest":"newconstantinople","x":-115.21641388208923,"y":-28.19083663634956,"z":401.80738914578353},{"name":"JumpToPerry","dest":"perry","x":306.9738266959534,"y":13.20576885715127,"z":93.85131711192332}]},{"name":"xxn-1927","sector":"gemini_sector","star":{"name":"xxn-1927","r":10.0,"x":14.594814,"y":0.0,"z":-14.594814,"tex":"sol/sun.png"},"planets":[{"name":"Jolson","r":1,"x":-0.0105,"y":0.0,"z":-0.003,"tex":"planets/carribean.png"},{"name":"Jolson Atmosphere","r":1,"x":0.0,"y":0.0,"z":0.0,"tex":"sol/earthcloudmaptrans.png"}],"bases":[{"name":"Refinery","type":"refinery","faction":"confed","x":-0.011340000000000001,"y":0.0,"z":-0.0032400000000000003,"authentic":true},{"name":"Agricultural Station","type":"agricultural_station","faction":"confed","x":-113.52817106526345,"y":120.9983438020572,"z":204.50248217675835,"authentic":false},{"name":"Factory Station","type":"factory","faction":"confed","x":-282.5239536585286,"y":-170.0392757775262,"z":-28.870766726322472,"authentic":false}],"jumps":[{"name":"JumpToNewConstantinople","dest":"newconstantinople","x":-375.6959107902754,"y":1.1228931415826082,"z":183.23914051169703},{"name":"JumpToNewDetroit","dest":"newdetroit","x":-230.38747783755647,"y":-20.50243911333382,"z":-341.56347880833135}]},{"name":"varnus","sector":"gemini_sector","star":{"name":"varnus","r":10.0,"x":14.594814,"y":0.0,"z":-14.594814,"tex":"sol/sun.png"},"planets":[{"name":"Rodin","r":1,"x":-0.0155,"y":0.0,"z":-0.006,"tex":"planets/m_class.png"},{"name":"Rodin Atmosphere","r":1,"x":0.0,"y":0.0,"z":0.0,"tex":"sol/earthcloudmaptrans.png"}],"bases":[{"name":"Refinery","type":"refinery","faction":"confed","x":0.0,"y":0.0,"z":0.0,"authentic":true},{"name":"Agricultural Station","type":"agricultural_station","faction":"confed","x":-237.27978421375155,"y":51.49266414809972,"z":-118.0815570987761,"authentic":false},{"name":"Factory Station","type":"factory","faction":"confed","x":-118.48320858553052,"y":-89.84763524495065,"z":-296.7564949532971,"authentic":false}],"jumps":[{"name":"JumpToNewConstantinople","dest":"newconstantinople","x":-378.83665570354935,"y":56.69983746483922,"z":-176.6544318587858}]},{"name":"rikel","sector":"gemini_sector","star":{"name":"rikel","r":10.0,"x":14.594814,"y":0.0,"z":-14.594814,"tex":"sol/sun.png"},"planets":[{"name":"Siva","r":1,"x":-0.014,"y":0.0,"z":-0.0115,"tex":"planets/m_class1.png"},{"name":"Siva Atmosphere","r":1,"x":0.0,"y":0.0,"z":0.0,"tex":"sol/earthcloudmaptrans.png"}],"bases":[{"name":"Mining Base","type":"miningbase","faction":"confed","x":0.0,"y":0.0,"z":0.0,"authentic":true},{"name":"Agricultural Station","type":"agricultural_station","faction":"confed","x":159.8485148511827,"y":248.71399125549942,"z":-263.8759620953351,"authentic":false},{"name":"Smuggler's Den","type":"pirate_base","faction":"pirates","x":-151.86380634550005,"y":217.99783711321652,"z":-77.89240614511073,"authentic":false}],"jumps":[{"name":"JumpTo44-P-IM","dest":"44-p-im","x":-281.3366392573361,"y":9.291253415867686,"z":291.33261988899824},{"name":"JumpToNewDetroit","dest":"newdetroit","x":21.56241173202502,"y":26.60479257814586,"z":-411.4353684362814}]},{"name":"manchester","sector":"gemini_sector","star":{"name":"manchester","r":10.0,"x":14.594814,"y":0.0,"z":-14.594814,"tex":"sol/sun.png"},"planets":[],"bases":[{"name":"Refinery","type":"refinery","faction":"confed","x":165.20097912289202,"y":44.105486292392015,"z":244.0392626915127,"authentic":true},{"name":"Agricultural Station","type":"agricultural_station","faction":"confed","x":-162.47364534065127,"y":4.875579033978283,"z":-108.84944626595825,"authentic":false},{"name":"Factory Station","type":"factory","faction":"confed","x":5.403113947249949,"y":-181.48070434108377,"z":-275.86159743368626,"authentic":false}],"jumps":[{"name":"JumpToNewDetroit","dest":"newdetroit","x":-381.9997487032737,"y":-47.342531802132726,"z":-154.33791494845238}]},{"name":"nd-57","sector":"gemini_sector","star":{"name":"nd-57","r":10.0,"x":14.594814,"y":0.0,"z":-14.594814,"tex":"sol/sun.png"},"planets":[{"name":"Nav 2","r":1,"x":0.004,"y":0.0,"z":0.011,"tex":"invisible.png"},{"name":"NewReno","r":1,"x":-0.014,"y":0.0,"z":-0.0145,"tex":"planets/carribean1.png"},{"name":"NewReno Atmosphere","r":1,"x":0.0,"y":0.0,"z":0.0,"tex":"sol/earthcloudmaptrans.png"}],"bases":[{"name":"Mining Base","type":"miningbase","faction":"confed","x":-322.88432363420725,"y":-213.4101710980758,"z":170.31203072983772,"authentic":false},{"name":"Agricultural Station","type":"agricultural_station","faction":"confed","x":178.87025482486933,"y":-114.36030478216708,"z":43.69067621883005,"authentic":false},{"name":"Smuggler's Den","type":"pirate_base","faction":"pirates","x":-291.87326673418283,"y":214.91128101479262,"z":-153.98402910213917,"authentic":false}],"jumps":[{"name":"JumpToNewDetroit","dest":"newdetroit","x":408.9290144832342,"y":-23.09523392468691,"z":50.210169425833016}]},{"name":"saxtogue","sector":"gemini_sector","star":{"name":"saxtogue","r":10.0,"x":14.594814,"y":0.0,"z":-14.594814,"tex":"sol/sun.png"},"planets":[{"name":"Olympus","r":1,"x":0.0075,"y":0.0,"z":0.0135,"tex":"planets/m_class2.png"},{"name":"Olympus Atmosphere","r":1,"x":0.0,"y":0.0,"z":0.0,"tex":"sol/earthcloudmaptrans.png"}],"bases":[{"name":"Mining Base","type":"miningbase","faction":"confed","x":145.6228256225586,"y":-202.2482012398541,"z":-264.78016427718103,"authentic":false},{"name":"Agricultural Station","type":"agricultural_station","faction":"confed","x":129.09485667478293,"y":202.60512724053115,"z":21.888586622662842,"authentic":false},{"name":"Smuggler's Den","type":"pirate_base","faction":"pirates","x":19.562250515446067,"y":-193.3174611767754,"z":204.5187048614025,"authentic":false}],"jumps":[{"name":"JumpToNewDetroit","dest":"newdetroit","x":-275.6818112120521,"y":-58.73531173914671,"z":-306.17566684314164}]},{"name":"raxis","sector":"gemini_sector","star":{"name":"raxis","r":10.0,"x":14.594814,"y":0.0,"z":-14.594814,"tex":"sol/sun.png"},"planets":[{"name":"Trinsic","r":1,"x":0.006,"y":0.0,"z":0.011,"tex":"planets/m_class2.png"},{"name":"Trinsic Atmosphere","r":1,"x":0.0,"y":0.0,"z":0.0,"tex":"sol/earthcloudmaptrans.png"}],"bases":[{"name":"Refinery","type":"refinery","faction":"confed","x":0.0,"y":0.0,"z":0.0,"authentic":true},{"name":"Agricultural Station","type":"agricultural_station","faction":"confed","x":342.5009947968647,"y":-155.3058037534356,"z":30.70522742345929,"authentic":false},{"name":"Factory Station","type":"factory","faction":"confed","x":-190.87086115032434,"y":-36.43202513922006,"z":73.72981410007924,"authentic":false}],"jumps":[{"name":"JumpToNewDetroit","dest":"newdetroit","x":353.1529264969814,"y":-21.964540807530284,"z":-212.1956891801001}]},{"name":"44-p-im","sector":"gemini_sector","star":{"name":"44-p-im","r":10.0,"x":14.594814,"y":0.0,"z":-14.594814,"tex":"sol/sun.png"},"planets":[{"name":"Nav 2","r":1,"x":-0.0032,"y":0.0,"z":0.0052,"tex":"invisible.png"}],"bases":[{"name":"Mining Base","type":"miningbase","faction":"confed","x":210.77055449131876,"y":143.44078942667693,"z":-128.79860138054937,"authentic":false},{"name":"Agricultural Station","type":"agricultural_station","faction":"confed","x":275.3848920110613,"y":-234.53754372894764,"z":341.2274807225913,"authentic":false}],"jumps":[{"name":"JumpToNewConstantinople","dest":"newconstantinople","x":-29.158208237097984,"y":-20.14903829433024,"z":-416.98177285392467},{"name":"JumpToRikel","dest":"rikel","x":-180.60891162043237,"y":-51.40070521272719,"z":370.3031474930815}]},{"name":"junction","sector":"gemini_sector","star":{"name":"junction","r":10.0,"x":14.594814,"y":0.0,"z":-14.594814,"tex":"sol/sun.png"},"planets":[{"name":"Burton","r":1,"x":-0.022,"y":0.0,"z":-0.011,"tex":"planets/m_class1.png"},{"name":"Burton","r":1,"x":0.0,"y":0.0,"z":0.0,"tex":"textures/earthcloudmaptrans.png"},{"name":"Speke","r":1,"x":0.022,"y":0.0,"z":0.014,"tex":"planets/carribean.png"},{"name":"Speke","r":1,"x":0.0,"y":0.0,"z":0.0,"tex":"textures/earthcloudmaptrans.png"},{"name":"Victoria","r":1,"x":0.0075,"y":0.0,"z":-0.0145,"tex":"planets/m_class.png"},{"name":"Victoria","r":1,"x":0.0,"y":0.0,"z":0.0,"tex":"textures/earthcloudmaptrans.png"}],"bases":[{"name":"Mining Base","type":"miningbase","faction":"confed","x":29.41442639566958,"y":-136.4020174369216,"z":215.12533181812614,"authentic":false},{"name":"Agricultural Station","type":"agricultural_station","faction":"confed","x":198.28759494703263,"y":202.8885257896036,"z":4.417570331133902,"authentic":false},{"name":"Factory Station","type":"factory","faction":"confed","x":-341.41401511151344,"y":70.25675184559077,"z":-137.7446650993079,"authentic":false}],"jumps":[{"name":"JumpToNewConstantinople","dest":"newconstantinople","x":-405.5836139746127,"y":-8.846678752452135,"z":-101.12335079145846}]},{"name":"aldebran","sector":"gemini_sector","star":{"name":"aldebran","r":10.0,"x":14.594814,"y":0.0,"z":-14.594814,"tex":"sol/sun.png"},"planets":[{"name":"Matahari","r":1,"x":0.0,"y":0.0,"z":0.0115,"tex":"planets/m_class2.png"},{"name":"Matahari Atmosphere","r":1,"x":0.0,"y":0.0,"z":0.0,"tex":"sol/earthcloudmaptrans2.png"}],"bases":[{"name":"Mining Base","type":"miningbase","faction":"confed","x":-214.77384145837277,"y":147.79574784915894,"z":259.9510315572843,"authentic":false},{"name":"Agricultural Station","type":"agricultural_station","faction":"confed","x":-48.21561286225915,"y":-51.09106109011918,"z":-7.728720875456929,"authentic":false}],"jumps":[{"name":"JumpToNewConstantinople","dest":"newconstantinople","x":399.7353880339829,"y":-54.745104694738984,"z":122.21137243857928}]}],"links":[["newconstantinople","44-p-im"],["newconstantinople","aldebran"],["newconstantinople","junction"],["newconstantinople","newdetroit"],["newconstantinople","newcastle"],["newconstantinople","varnus"],["newconstantinople","xxn-1927"],["newdetroit","manchester"],["newdetroit","nd-57"],["newdetroit","newconstantinople"],["newdetroit","perry"],["newdetroit","raxis"],["newdetroit","rikel"],["newdetroit","saxtogue"],["newdetroit","xxn-1927"],["perry","newdetroit"],["perry","newcastle"],["newcastle","newconstantinople"],["newcastle","perry"],["xxn-1927","newconstantinople"],["xxn-1927","newdetroit"],["varnus","newconstantinople"],["rikel","44-p-im"],["rikel","newdetroit"],["manchester","newdetroit"],["nd-57","newdetroit"],["saxtogue","newdetroit"],["raxis","newdetroit"],["44-p-im","newconstantinople"],["44-p-im","rikel"],["junction","newconstantinople"],["aldebran","newconstantinople"]],"ships":[{"name":"Llama.begin","mass":250,"fuel":25,"hull":500,"price":1,"role":"Vessel","desc":"SHUTTLE"},{"name":"Llama","mass":336,"fuel":25,"hull":500,"price":900000,"role":"Vessel","desc":"SHUTTLE"},{"name":"Dostoevsky","mass":42,"fuel":3.5,"hull":300,"price":360000,"role":"Vessel","desc":"FIGHTER"},{"name":"Quicksilver","mass":33.6,"fuel":3.5,"hull":90,"price":145000,"role":"Vessel","desc":"SUPPORT"},{"name":"Admonisher","mass":360,"fuel":22.92,"hull":700,"price":3000000,"role":"Vessel","desc":"FIGHTER"},{"name":"Hidalgo","mass":60000,"fuel":2333,"hull":14000,"price":7500000,"role":"Vessel","desc":"SUPPORT"},{"name":"Mule","mass":32000,"fuel":2333,"hull":14000,"price":8000000,"role":"Vessel","desc":"SUPPORT"}],"goods":[{"file":"Ration_Mealpacks","cat":"Natural_Products/Food/Confed","price":100.0,"volume":1.0,"desc":"@cargo/ration_mealpacks.image@Owing to the generally high danger of radiation deterioration, most foods consumed in space by human"},{"file":"Standard_Mealpacks","cat":"Natural_Products/Food/Confed","price":100.0,"volume":1.0,"desc":"@cargo/standard_mealpacks.image@Standard Mealpacks are designed for regular people who want a halfway decent meal without a lot of"},{"file":"Luxury_Mealpacks","cat":"Natural_Products/Food/Confed","price":180.0,"volume":1.0,"desc":"@cargo/luxury_mealpacks.image@Oriented towards the human digestive system, such packs typically contain actual game meat, exotic f"},{"file":"Filtered_Water","cat":"Natural_Products/Food/Confed","price":40.0,"volume":10.0,"desc":"@cargo/fresh_water.image@The main building block of life. Fresh water is required by most animalistic species to maintain bodily f"},{"file":"Aera_Ration","cat":"Natural_Products/Food/Aera","price":40.0,"volume":1.0,"desc":"@cargo/aera_ration.image@Containing utilitarian dehydrated meal bars with jerky for dessert, the Aera ration is human edible, but "},{"file":"Jhurlon","cat":"Natural_Products/Food/Aera","price":140.0,"volume":1.0,"desc":"@cargo/jhurlon.image@A native of the Bzbr world, the Jhurlon most closely resembles a boulder sized land dwelling abalone. While w"},{"file":"Salted_Thok","cat":"Natural_Products/Food/Aera","price":130.0,"volume":1.0,"desc":"@cargo/salted_thok.image@Though the Aera destroyed their jungle forests, the seas fared better, and continue to produce this tasty"},{"file":"Sustipack","cat":"Natural_Products/Food/Rlaan","price":140.0,"volume":1.0,"desc":"@cargo/sustipacks.image@Containing the bare minimum in ammonia based concentrates and a carb syrup, these packs provide a Rlaan wi"},{"file":"Nutripack","cat":"Natural_Products/Food/Rlaan","price":150.0,"volume":1.0,"desc":"@cargo/nutripacks.image@Containing a protein brick, carb glop and gels in ammonia solutions stored at such temperatures that ammon"},{"file":"Ultrapack","cat":"Natural_Products/Food/Rlaan","price":40.0,"volume":1.0,"desc":"@cargo/ultrapacks.image@These Rlaan foodpacks are factory processed and hermetically sealed biofoods somewhat more tasteworthy to "},{"file":"Coffee","cat":"Natural_Products/Food/Generic","price":140.0,"volume":1.0,"desc":"@cargo/coffee.image@Generation upon generation of addicts have made the production of coffee one of the largest industries in know"},{"file":"Animal_Products","cat":"Natural_Products/Food/Generic","price":110.0,"volume":1.0,"desc":"@cargo/animal_products.image@Typically diary, eggs, caviar and other products of various animal internal organs, they remain a foo"},{"file":"Grains","cat":"Natural_Products/Food/Generic","price":70.0,"volume":10.0,"desc":"@cargo/grains.image@The edible grass seeds, grains, and the carbohydrates garnered from them, are a pillar of an omnivorous diet. "},{"file":"Seafood","cat":"Natural_Products/Food/Generic","price":115.0,"volume":1.0,"desc":"@cargo/seafood.image@This product range includes water dwelling creatures and their by-products. Typically it includes fish, crust"},{"file":"Meats","cat":"Natural_Products/Food/Generic","price":110.0,"volume":1.0,"desc":"@cargo/animal_meat.image@Although no food movement has ever managed to persuade diners away from their omnivorous roots, as range "},{"file":"Produce","cat":"Natural_Products/Food/Generic","price":80.0,"volume":1.0,"desc":"@cargo/produce.image@Fruits and vegetables ranging from the humble citrus fruit and salad vegetables to those exotic items found o"},{"file":"Malt_Beverages","cat":"Natural_Products/Liquor","price":45.0,"volume":1.0,"desc":"@cargo/beer.image@Incorporating alcohols such as beer, ale and mead, such drink is usually made from fermented grains, barley and "},{"file":"Wines","cat":"Natural_Products/Liquor","price":100.0,"volume":1.0,"desc":"@cargo/wine.image@The fermented juices of fruit, typically grapes, crushed under the feet of whoever was passing by, hence the var"},{"file":"Spirits","cat":"Natural_Products/Liquor","price":55.0,"volume":1.0,"desc":"@cargo/spirits.image@Consisting in the main of hard alcohols distilled from whatever was handy at the time and usually aged in woo"},{"file":"Brandy","cat":"Natural_Products/Liquor","price":70.0,"volume":1.0,"desc":"@cargo/brandy.image@Fermented fruit, distilled into liver quaking perfection. Notably, after humans expanded offworld, people stop"},{"file":"Space_Grog","cat":"Natural_Products/Liquor","price":60.0,"volume":2.0,"desc":"@cargo/space_grog.image@This is the stuff guaranteed to knock a drinker out cold after a couple of glasses have burned down their "},{"file":"Tripezian_Premium","cat":"Natural_Products/Liquor/Confed","price":55.0,"volume":0.25,"desc":"@cargo/tripezian_premium.image@Taste the flavour of the Frontier! Tripezian Ale is the product of fermented tripezian berries, an "},{"file":"Emendolya","cat":"Natural_Products/Liquor/Confed","price":2000.0,"volume":1.0,"desc":"@cargo/specialty_wines.image@This product was released to the public by Velthatris Corporation. Some of the latest achievements in"},{"file":"Specialty_Wines","cat":"Natural_Products/Liquor/Confed","price":10000.0,"volume":1.0,"desc":"@cargo/specialty_wines.image@Finely crafted wines from carefully cultivated vineyards. Unlike the cheap wines from farm planets de"},{"file":"Sarakan_Tears","cat":"Natural_Products/Liquor/Uln","price":160.0,"volume":0.25,"desc":"@cargo/sarakan_tears.image@Distilled from the sap of the Sarak bush, this spirit defines the old adage: 'Whatever doesn't kill you"},{"file":"Cotton","cat":"Natural_Products/Renewable_Resources","price":120.0,"volume":10.0,"desc":"@cargo/cotton.image@Used in the main as a fabric in clothing, textiles and home furnishings, cotton remains one of the best natura"},{"file":"Water","cat":"Natural_Products/Renewable_Resources","price":10.0,"volume":10.0,"desc":"@cargo/fresh_water.image@The main building block of life. Fresh water is required by most animalistic species to maintain bodily f"},{"file":"Rubber","cat":"Natural_Products/Renewable_Resources","price":150.0,"volume":1.0,"desc":"@cargo/rubber.image@An elastic substance that is obtained by coagulating the milky juice of various tropical plants, prepared as s"},{"file":"Lumber","cat":"Natural_Products/Renewable_Resources","price":105.0,"volume":27.0,"desc":"@cargo/lumber.image@The stripped down trunks of larger plantlife, still finding use in construction, religious ceremonies, artwork"},{"file":"Spices","cat":"Natural_Products/Plant_Products","price":30.0,"volume":0.1,"desc":"@cargo/spices.image@Useful as a preservative and in general food preparation. Traders often use spices to disguise the taste of ra"},{"file":"Incense","cat":"Natural_Products/Plant_Products","price":50.0,"volume":1.0,"desc":"@cargo/incense.image@Consisting of compressed fragrant plantlife, oils and the occasional recreational drug, incense is used for b"},{"file":"Narcotics","cat":"Natural_Products/Plant_Products","price":110.0,"volume":0.1,"desc":"@cargo/narcotics.image@Typically, the cured product of various plants burnt to produce an aromatic smoke and inhaled through a res"},{"file":"Krystal","cat":"Natural_Products/Plant_Products","price":240.0,"volume":0.1,"desc":"@cargo/krystal.image@Typically a small tube filled with a crystalline substance used to produce an euphoric effect. Commonly absor"},{"file":"Khaisalantimin_F62","cat":"Natural_Products/Plant_Products","price":500.0,"volume":0.1,"desc":"@cargo/khaisalantimin_F62.image@Produced by a genetically engineered hybrid of Terran and Xeno flora, the F62 variant of the extra"},{"file":"Livestock","cat":"Natural_Products/Life-forms","price":110.0,"volume":100.0,"desc":"@cargo/livestock.image@Without goats and sheep, the world of good cheese would be greatly crippled."},{"file":"Bonsai","cat":"Natural_Products/Life-forms","price":250.0,"volume":8.0,"desc":"@cargo/bonsai.image@The ancient art of Bonsai (crudely: Tree Pruning) creates easily transportable plant shapes of all exotic shap"},{"file":"Astral_Gases","cat":"Raw_Materials/Gases","price":40.0,"volume":25.0,"desc":"@cargo/astral_gases.image@Astral gases are the highly valuable and rare products of uncommon reactions in nebulas and gas giants. "},{"file":"Atmospheric_Gases","cat":"Raw_Materials/Gases","price":30.0,"volume":25.0,"desc":"@cargo/atmospheric_gases.image@Consisting primarily of those gases required to support life such as hydrogen, oxygen and nitrogen."},{"file":"Halogen_Gases","cat":"Raw_Materials/Gases","price":80.0,"volume":25.0,"desc":"@cargo/halogen_gases.image@Halogen gases are characterized as salt forming (hence sodium chloride or common table salt) They are u"},{"file":"Noble_Gases","cat":"Raw_Materials/Gases","price":65.0,"volume":25.0,"desc":"@cargo/noble_gases.image@Otherwise known as the inert gases. Commonly used in refining, medical applications, general manufacturin"},{"file":"Corundum_Crystals","cat":"Raw_Materials/Industrial_Gems","price":1400.0,"volume":10.0,"desc":"@cargo/corundum_crystal.image@A hard aluminum oxide, the common forms of which are used as abrasives."},{"file":"Dilithium_Crystals","cat":"Raw_Materials/Industrial_Gems","price":1340.0,"volume":10.0,"desc":"@cargo/dilithium.image@Dilithium telluride, while not particularly impressive, is always a desired item among the religious fanati"},{"file":"Quartz_Crystals","cat":"Raw_Materials/Industrial_Gems","price":1000.0,"volume":10.0,"desc":"@cargo/quartz_crystal.image@A useful component of cheap oscillators and cheap art."},{"file":"Trilithium_Crystals","cat":"Raw_Materials/Industrial_Gems","price":1600.0,"volume":10.0,"desc":"@cargo/trilithium_crystal.image@Prized possessions of the trekkie religion, the crystals (trilithium nitride) have precious little"},{"file":"Construction_Stone","cat":"Raw_Materials/Stone","price":20.0,"volume":50.0,"desc":"@cargo/facing_stone.image@When advanced contruction materials are unavailable, or not usable in a particular environment, large st"},{"file":"Facing_Stone","cat":"Raw_Materials/Stone","price":100.0,"volume":25.0,"desc":"@cargo/construction_stone.image@The finer, better textured stone (of which marble is famous) is used as a decorative covering on b"},{"file":"Natural_Sculptures","cat":"Raw_Materials/Stone","price":350.0,"volume":50.0,"desc":"@cargo/natural_sculptures.image@Originally considered waste, stone that has been carved by nature is now considered both decoratio"},{"file":"Natural_Gas","cat":"Raw_Materials/Hydrocarbons","price":92.0,"volume":25.0,"desc":"@cargo/natural_gas.image@A combustible mixture of gases, usable as both a fuel and a raw material in production. A secondary sourc"},{"file":"Oil","cat":"Raw_Materials/Hydrocarbons","price":80.0,"volume":10.0,"desc":"@cargo/oil.image@Liquid lipids of various origin."},{"file":"Coal","cat":"Raw_Materials/Hydrocarbons","price":20.0,"volume":10.0,"desc":"@cargo/hydrocarbons.image@Ancient dead compressed carbon-life. Solid form."},{"file":"Butane","cat":"Raw_Materials/Hydrocarbons","price":120.0,"volume":10.0,"desc":"@cargo/butane.image@Because sometimes, with all the technology around you, what you really want is a Zippo."},{"file":"Diesel","cat":"Raw_Materials/Hydrocarbons","price":130.0,"volume":10.0,"desc":"@cargo/diesel.image@On planets where resupply is expensive, diesel is an efficient, if polluting, fuel of choice."},{"file":"Petroleum","cat":"Raw_Materials/Hydrocarbons","price":90.0,"volume":10.0,"desc":"@cargo/petroleum.image@Ancient dead carbon-life. Liquid form."},{"file":"Iron_Ore","cat":"Raw_Materials/Ores","price":52.0,"volume":10.0,"desc":"@cargo/base.image@Iron has been vital in the histories of all of the spacefaring races. The prime variance is the ratio of cast ir"},{"file":"Nickel_Ore","cat":"Raw_Materials/Ores","price":50.0,"volume":10.0,"desc":"@cargo/base.image@Useful as an anti-corrosive coating, nickel is often mined in bulk from nickel-iron asteroids."},{"file":"Tin_Ore","cat":"Raw_Materials/Ores","price":47.0,"volume":10.0,"desc":"@cargo/base.image@Absent tin, the interstellar sardine trade would flounder."},{"file":"Tungsten_Ore","cat":"Raw_Materials/Ores","price":110.0,"volume":10.0,"desc":"@cargo/base.image@Due to its exceptional melting temperature and continued tensile strength at high temperatures, tungsten is a vi"},{"file":"Base_Metals","cat":"Raw_Materials/Metals","price":23.0,"volume":10.0,"desc":"@cargo/base.image@Composing most elements discovered to date, it includes titanium, iron, nickel, copper to name a few common meta"},{"file":"Alkali_Metals","cat":"Raw_Materials/Metals","price":47.0,"volume":10.0,"desc":"@cargo/alkali_metals.image@Alkali metals and earths are primarily used in alloys with other metals. As such, alkali derivatives ca"},{"file":"Isometal","cat":"Refined_Materials/Alloys/Confed","price":130.0,"volume":1.0,"desc":"@cargo/isometal.image@A generic term for any metal alloy which has been strengthened via a slow thermal reduction cycle. As a resu"},{"file":"Plasteel","cat":"Refined_Materials/Alloys/Confed","price":60.0,"volume":1.0,"desc":"@cargo/plasteel.image@An alloy of metals and carbon nanotubes has resulted in a lightweight metal with high strength and durabilit"},{"file":"Plasglass","cat":"Refined_Materials/Alloys/Confed","price":60.0,"volume":1.0,"desc":"@cargo/plasglass.image@An alloy of metals, plastics and silica glass, this alloy has a transparency slightly less than glass, but "},{"file":"Steel","cat":"Refined_Materials/Alloys/Confed","price":76.0,"volume":1.0,"desc":"@cargo/steel.image@While surpassed by more highly advanced alloy combinations, steel remains a low cost version for general and ma"},{"file":"Bipolite","cat":"Refined_Materials/Alloys/Aera","price":110.0,"volume":1.0,"desc":"@cargo/bipolite.image@A polysteel mix variable alloy doped to produce electromagnetic regions, which, when activated, assist in di"},{"file":"Duranium","cat":"Refined_Materials/Alloys/Aera","price":110.0,"volume":1.0,"desc":"@cargo/duranium.image@Sacrificing increased mass for increased protection, massive slabs of depleted uranium are mixed with osmium"},{"file":"Polysteel","cat":"Refined_Materials/Alloys/Aera","price":78.0,"volume":1.0,"desc":"@cargo/polysteel.image@An intricate filadough-like sandwich of metals and ceramics glued together by carbon polymers."},{"file":"Tritanium","cat":"Refined_Materials/Alloys/Aera","price":100.0,"volume":1.0,"desc":"@cargo/tritanium.image@An alloy based on titanium and forming interlinking molecules of three metallic atoms, this metal is exceed"},{"file":"Carbonium","cat":"Refined_Materials/Alloys/Rlaan","price":40.0,"volume":1.0,"desc":"@cargo/carbonium.image@This alloy is generated from the bio-waste of the Rlaan biogenerator energy system. This bio-waste is melde"},{"file":"Obsidisteel","cat":"Refined_Materials/Alloys/Rlaan","price":100.0,"volume":1.0,"desc":"@cargo/obsidisteel.image@A combination of metals and silicate oxides, this dark, hard substance is actually secreted from living s"},{"file":"Radium","cat":"Refined_Materials/Radioactive_Metals","price":400.0,"volume":1.0,"desc":"@cargo/radium.image@A wonderful ingredient for glowing paints."},{"file":"Thorium","cat":"Refined_Materials/Radioactive_Metals","price":300.0,"volume":1.0,"desc":"@cargo/radioactives.image@An exceptionally common source of nuclear power, it is also known for the exceptional melting points of "},{"file":"Uranium","cat":"Refined_Materials/Radioactive_Metals","price":540.0,"volume":1.0,"desc":"@cargo/uranium.image@A rather common radioactive used primarily in fission piles. The depleted isotopes are used in kinetic impact"},{"file":"Anti_Corrosives","cat":"Refined_Materials/Precious_Metals","price":180.0,"volume":1.0,"desc":"@cargo/anti_corrosives.image@Exemplified by such metals as Platinum, prized for its luster and resistance to corrosion, the rarity"},{"file":"Gold","cat":"Refined_Materials/Precious_Metals","price":160.0,"volume":1.0,"desc":"@cargo/gold.image@An exceptionally ductile metal, gold has long been used for the manufacture of useless, albeit pretty, construct"},{"file":"Rare_Earths","cat":"Refined_Materials/Precious_Metals","price":156.0,"volume":1.0,"desc":"@cargo/rare_earths.image@Otherwise known as lanthanoids or the lanthanide series of metals that are highly reactive in air. Rare E"},{"file":"Chemical_Mix","cat":"Refined_Materials/Chemicals","price":100.0,"volume":1.0,"desc":"@cargo/chemical_mix.image@Original sources of chemicals used in the creation of gases, liquids and solids that form chemical fuel."},{"file":"Heavy_Water","cat":"Refined_Materials/Chemicals","price":100.0,"volume":1.0,"desc":"@cargo/heavy_water.image@While not a fuel in itself, it is a key component in several types of advanced fuels. It is a water molec"},{"file":"Dyes","cat":"Refined_Materials/Chemicals","price":100.0,"volume":1.0,"desc":"@cargo/dyes.image@Dyes are colored substances obtained from various chemical compounds and used to give products such as food, tex"},{"file":"Acids","cat":"Refined_Materials/Chemicals","price":100.0,"volume":1.0,"desc":"@cargo/acids.image@Acids are substances that taste sour in water solution, react with some metals to release hydrogen, react with "},{"file":"Catalysts","cat":"Refined_Materials/Chemicals","price":100.0,"volume":1.0,"desc":"@cargo/catalysts.image@Catalysts are substances that enable a chemical reaction to occur at a faster rate, lower temperature or in"},{"file":"Esters","cat":"Refined_Materials/Chemicals","price":100.0,"volume":1.0,"desc":"@cargo/esters.image@Any of a class of often fragrant compounds that can be represented by the formula RCOOR and that are usually f"},{"file":"Rare_Catalysts","cat":"Refined_Materials/Chemicals","price":200.0,"volume":1.0,"desc":"@cargo/rare_catalysts.image@Corporations have made fortunes by perfecting a single chemical reaction for maximum efficiency. One o"},{"file":"Ethanol","cat":"Refined_Materials/Chemicals","price":100.0,"volume":1.0,"desc":"@cargo/ethanol.image@Explosive fuel liquid used as a basic fuel source for powering primitive combustion motors. The motor ignites"},{"file":"Petrochemicals","cat":"Refined_Materials/Chemicals","price":100.0,"volume":1.0,"desc":"@cargo/petrochems.image@Refined hydrocarbon fuels. Used to power lower tech combustion equipment and vehicles. Having seen use for"},{"file":"Chemical_Fuels","cat":"Refined_Materials/Chemicals","price":100.0,"volume":1.0,"desc":"@cargo/chemfuel.image@Gases, liquids and solids that when superheated, explode, providing heat and thrust when directed out of a n"},{"file":"Industrial_Gemstones","cat":"Refined_Materials/Purified_and_Enhanced_Materials","price":1130.0,"volume":1.0,"desc":"@cargo/industrial_gemstones.image@Lesser quality and flawed gemstones are more often used in industrial processes rather than for "},{"file":"Jewels","cat":"Refined_Materials/Purified_and_Enhanced_Materials","price":1130.0,"volume":1.0,"desc":"@cargo/jewels.image@Formed by high planetary pressure and heat, jewels are brilliantly colored gemstones usually used for personal"},{"file":"Diamonds","cat":"Refined_Materials/Purified_and_Enhanced_Materials","price":1000.0,"volume":1.0,"desc":"@cargo/diamonds.image@As one of the hardest known natural substances, diamonds are a rarity among gemstones. They find use in most"},{"file":"Sorir_Lightstones","cat":"Refined_Materials/Purified_and_Enhanced_Materials","price":1130.0,"volume":1.0,"desc":"@cargo/sorir_lightstones.image@Researchers are still undecided if this stone is a live being, or a chemically reactant mineral. Ei"},{"file":"Reinforced_Rubber","cat":"Refined_Materials/Purified_and_Enhanced_Materials","price":1130.0,"volume":1.0,"desc":"@cargo/reinforced_rubber.image@Natural or synthetic rubber modified by chemical treatment to increase its useful properties such a"},{"file":"Wood_Boards","cat":"Refined_Materials/Purified_and_Enhanced_Materials","price":130.0,"volume":10.0,"desc":"@cargo/wood_boards.image@While wood is no longer required for its structural aspects on developed worlds, lesser developed planets"},{"file":"Plastics","cat":"Refined_Materials/Synthetics","price":240.0,"volume":1.0,"desc":"@cargo/plastics.image@Any of various organic compounds artificially produced by polymerization and capable of being molded, extrud"},{"file":"Computer_Fibres","cat":"Refined_Materials/Synthetics","price":370.0,"volume":1.0,"desc":"@cargo/computer_fibres.image@The most common component of modern electronics and computers is the 'computer fibre'. These fibers a"},{"file":"Bulk_Seeds","cat":"Industrially_Manufactured_Goods/Agricultural","price":25.0,"volume":100.0,"desc":"@cargo/bulk_seeds.image@As most seed crops develop sterile adult forms when growing in alien soils, only a select few planets have"},{"file":"Engineered_Seeds","cat":"Industrially_Manufactured_Goods/Agricultural","price":25.0,"volume":50.0,"desc":"@cargo/engineered_seeds.image@Genetically enhanced or varied cropseed developed to remain fertile in alien soils, to produce more "},{"file":"Pesticides","cat":"Industrially_Manufactured_Goods/Agricultural","price":100.0,"volume":25.0,"desc":"@cargo/pesticides.image@No matter where one goes, it seems that every world capable of supporting life supports at least one speci"},{"file":"Synthetic_Fertilizer","cat":"Industrially_Manufactured_Goods/Agricultural","price":140.0,"volume":64.0,"desc":"@cargo/synthetic_fertilizer.image@Since the smell of organic fertilizer is impossible to get out of one's cargo hold, most transpo"},{"file":"Distillators","cat":"Industrially_Manufactured_Goods/Agricultural","price":200.0,"volume":5.0,"desc":"@cargo/distillators.image@While mainly consisting of tubing and pumps, distillators will extract fresh water from any water source"},{"file":"Livestock_Equipment","cat":"Industrially_Manufactured_Goods/Agricultural","price":150.0,"volume":10.0,"desc":"@cargo/livestock_equipment.image@Whether you need to collect the products of an animals intestines for food, ensure the care of sa"},{"file":"Hydroponics","cat":"Industrially_Manufactured_Goods/Agricultural","price":130.0,"volume":20.0,"desc":"@cargo/hydroponics.image@Growing plants in a liquid solution offers flexibility in placement relative to soil planting. Especially"},{"file":"Automated_Factories","cat":"Industrially_Manufactured_Goods/Construction","price":27000000.0,"volume":10000.0,"desc":"@cargo/automated_factories.image@As general production involves - in the main - mindless repetition, it is expected that most spac"},{"file":"Construction_Vehicles","cat":"Industrially_Manufactured_Goods/Construction","price":90000.0,"volume":75.0,"desc":"@cargo/construction_vehicles.image@The ability to lift large masses and manipulate them dextrously in three dimensions is essentia"},{"file":"Factory_Constructors","cat":"Industrially_Manufactured_Goods/Construction","price":100000.0,"volume":800.0,"desc":"@cargo/factory_constructors.image@Self constructing factories in a large box. These constructors need only be placed in location, "},{"file":"Landscaping_Equipment","cat":"Industrially_Manufactured_Goods/Construction","price":16620.0,"volume":55.0,"desc":"@cargo/earthmover.image@For when that hill is blocking your view, you want to recreate your garden surrounds in the latest style, "},{"file":"PreFab_Buildings","cat":"Industrially_Manufactured_Goods/Construction","price":4400.0,"volume":125.0,"desc":"@cargo/prefab_buildings.image@Prefabricated modular buildings are used for all bar the most costly or esoteric of construction. Ea"},{"file":"Recycling_Tanks","cat":"Industrially_Manufactured_Goods/Construction","price":25000.0,"volume":8.0,"desc":"@cargo/recycling_tanks.image@Highly advanced civilizations produce a great deal of waste products. Discarded electronics, empty me"},{"file":"PAI_Wetware","cat":"Industrially_Manufactured_Goods/Electronics","price":12500.0,"volume":0.5,"desc":"@cargo/pai_wetware.image@Pseudo-Artificial Intelligence. PAIs are wet-ware embedded in hardware - genetically engineered brain-in-"},{"file":"AI_Cores","cat":"Industrially_Manufactured_Goods/Electronics","price":13750000.0,"volume":5.0,"desc":"@cargo/ai_cores.image@An outgrowth of cybernetics, AI Cores approach true artificial intelligence. AI Core development and usage i"},{"file":"Welding_Lasers","cat":"Industrially_Manufactured_Goods/Manufacturing","price":180.0,"volume":2.0,"desc":"@cargo/welding_lasers.image@There are government projects in every colony that primarily consist of tearing up infrastructure and "},{"file":"Factory_Equipment","cat":"Industrially_Manufactured_Goods/Manufacturing","price":9600.0,"volume":2.0,"desc":"@cargo/factory_equipment.image@All hardwired equipment needed for a factory to commence operations. Whether food processing or pro"},{"file":"Robot_Workers","cat":"Industrially_Manufactured_Goods/Manufacturing","price":2900.0,"volume":4.0,"desc":"@cargo/robot_workers.image@Tireless laborers that will attempt to do nearly any task you can require of them. Unfortunately, in or"},{"file":"Assembly_Tools","cat":"Industrially_Manufactured_Goods/Manufacturing","price":96.0,"volume":0.5,"desc":"@cargo/assembly_tools.image@To do any job where something needs to be put together, ripped apart or combined with other things, yo"},{"file":"BioApplicator","cat":"Industrially_Manufactured_Goods/Manufacturing","price":90.0,"volume":5.0,"desc":"@cargo/cargo_hud.image@Essentially a vat full of genetically engineered organisms or their biowaste, with some valves and a spray "},{"file":"BioRemodeler","cat":"Industrially_Manufactured_Goods/Manufacturing","price":96.0,"volume":0.5,"desc":"@cargo/bio_remodeler.image@This device applies a set of enzymes that sufficiently liquify the organics used in most Rlaan construc"},{"file":"Atmospheric_Scrubbers","cat":"Industrially_Manufactured_Goods/Mining","price":27000.0,"volume":8.0,"desc":"@cargo/atmospheric_scrubbers.image@Atmostpheric scrubbers consist of a series of screens, containers and filters to remove toxic w"},{"file":"Boring_Droids","cat":"Industrially_Manufactured_Goods/Mining","price":90.0,"volume":25.0,"desc":"@cargo/boring_droids.image@Construction of mine shafts has never been so easy. Just feed your tunnel plans to these babies, and co"},{"file":"Explosives","cat":"Industrially_Manufactured_Goods/Mining","price":95.0,"volume":1.0,"desc":"@cargo/explosives.image@Things that go BOOM are always required to obtain materials from rock strata. Whether removing surface mat"},{"file":"Hull_Patches","cat":"Industrially_Manufactured_Goods/Mining","price":95.0,"volume":1.0,"desc":"@cargo/hull_patches.image@As hull leaks are frequent due to general use (let alone battle), various products have been developed t"},{"file":"Laser_Drills","cat":"Industrially_Manufactured_Goods/Mining","price":95.0,"volume":2.0,"desc":"@cargo/laser_drills.image@While the precise nature of the cuts produced by this drill certainly add to its usefulness, the fact th"},{"file":"Light_Alls","cat":"Industrially_Manufactured_Goods/Mining","price":88.0,"volume":1.0,"desc":"@cargo/light_alls.image@There are few things more terrifying to an asteroid miner than the classic scene from the holovid movie 'T"},{"file":"Material_Processors","cat":"Industrially_Manufactured_Goods/Mining","price":45000.0,"volume":100.0,"desc":"@cargo/material_processors.image@On site initial processing and refining of raw materials are performed by material processors. Fr"},{"file":"Waste_Recyclers","cat":"Industrially_Manufactured_Goods/Mining","price":24000.0,"volume":20.0,"desc":"@cargo/waste_recyclers.image@Waste Recyclers will filter all shipboard waste, recycling usable matter. Such includes fresh water, "},{"file":"Recycled_Electronics","cat":"Industrially_Manufactured_Goods/Recycled_Products","price":190.0,"volume":1.0,"desc":"@cargo/recycled_electronics.image@Especially prized by the collectors of the arcane, though also prized by cheapskates, the garbag"},{"file":"Recycled_Metals","cat":"Industrially_Manufactured_Goods/Recycled_Products","price":50.0,"volume":50.0,"desc":"@cargo/recycled_metals.image@That which can be readily melted can be readily re-made."},{"file":"Recycled_Oil","cat":"Industrially_Manufactured_Goods/Recycled_Products","price":60.0,"volume":10.0,"desc":"@cargo/recycled_oil.image@Given the prodigious use of hydrocarbons by sentient life, it is useful to reuse when possible."},{"file":"Recycled_Plastics","cat":"Industrially_Manufactured_Goods/Recycled_Products","price":38.0,"volume":10.0,"desc":"@cargo/recycled_plastics.image@As nearly all human civilian products rely on hydrocarbon polymers, were there not a massive recycl"},{"file":"Fuel_Cell","cat":"Industrially_Manufactured_Goods/Power_Utilities","price":70.0,"volume":1.0,"desc":"@cargo/water_dynamo.image@A fuel cell using the hydrogen+oxygen=water chemical reaction. Conversion of the gases to water produces"},{"file":"AM_Magcells","cat":"Industrially_Manufactured_Goods/Power_Utilities","price":70.0,"volume":1.0,"desc":"@cargo/am_magcells.image@The Magcell is a storage container and injector that stores charged matter and antimatter inside separate"},{"file":"Nuclear_Pods","cat":"Industrially_Manufactured_Goods/Power_Utilities","price":70.0,"volume":1.0,"desc":"@cargo/nuclear_pods.image@These pods hold fissionable fuel within dense radiation shielding. As advanced fission techniques allow "},{"file":"Fusion_Injectors","cat":"Industrially_Manufactured_Goods/Power_Utilities","price":70.0,"volume":1.0,"desc":"@cargo/fusion_injectors.image@Fusion Injectors are designed to hold the heavy water required for the fusion process. When required"},{"file":"H-Dispenser","cat":"Industrially_Manufactured_Goods/Power_Utilities","price":70.0,"volume":1.0,"desc":"@cargo/baakgah.image@An Aeran fuel cell material that releases hydrogen in an easily controlled manner. Highly efficient energy ge"},{"file":"Biocell","cat":"Industrially_Manufactured_Goods/Power_Utilities","price":70.0,"volume":1.0,"desc":"@cargo/biocell.image@Rlaan fuel cell technology evolved along the bio-energy path. Living micro-organisms provide additional energ"},{"file":"Chitty-chitty-boom-boom","cat":"Industrially_Manufactured_Goods/Power_Utilities","price":40.0,"volume":10.0,"desc":"@cargo/chitty-boom.image@An incredibly large, incredibly complex, and incredibly unstable hydrocarbon, CCBB is used in application"},{"file":"Weather_Control","cat":"Industrially_Manufactured_Goods/Xenoforming","price":400.0,"volume":100.0,"desc":"@cargo/weather_control.image@Even after several centuries, the prediction of weather is still an unreliable practice. As such, sci"},{"file":"Atmospheric_Processors","cat":"Industrially_Manufactured_Goods/Xenoforming","price":400.0,"volume":50.0,"desc":"@cargo/atmospheric_processors.image@Whether it be because of over-industrialization or innate unpleasantness, if a planetary atmos"},{"file":"Ozone_Replacement","cat":"Industrially_Manufactured_Goods/Xenoforming","price":330.0,"volume":50.0,"desc":"@cargo/ozone_replacement.image@Many electronic devices naturally produce ozone. However, as most of these devices tend to be groun"},{"file":"Forest_Regenerator","cat":"Industrially_Manufactured_Goods/Xenoforming","price":520.0,"volume":25.0,"desc":"@cargo/forest_regenerators.image@While many civilized races, with the notable exception of the Aera, would love to see their ances"},{"file":"Xenoforming_Units","cat":"Industrially_Manufactured_Goods/Xenoforming","price":8342.0,"volume":1600.0,"desc":"@cargo/terraforming_units.image@Incorporating atmospheric processing, development of a viable biosphere of plantlife and creation "},{"file":"Home_Furnishings","cat":"Consumer_and_Commercial_Goods/Domestic","price":140.0,"volume":75.0,"desc":"@cargo/home_furnishings.image@Whether filling a multi-room dwelling with creature comforts, or just a rug to avoid standing on col"},{"file":"Home_Appliances","cat":"Consumer_and_Commercial_Goods/Domestic","price":100.0,"volume":64.0,"desc":"@cargo/home_appliances.image@From the esoteric hover-masseuse to the ubiquitous Insta-Nuker, these are the champions of eternal co"},{"file":"Robot_Servants","cat":"Consumer_and_Commercial_Goods/Domestic","price":442.0,"volume":2.0,"desc":"@cargo/robot_servants.image@Trained in the nuances of absolute servility, and having the abilities of a bodyservant and portable d"},{"file":"Personal_Transport","cat":"Consumer_and_Commercial_Goods/Domestic","price":1896.0,"volume":42.0,"desc":"@cargo/personal_transport.image@Whether dropping down to the local dispensary, or travelling around the planet to visit friends, t"},{"file":"Standard_PADs","cat":"Consumer_and_Commercial_Goods/Electronics","price":45.0,"volume":1.0,"desc":"@cargo/standard_PAD.image@Personal Assistant Devices incorporate functions such as planetary communications, data storage and retr"},{"file":"Premium_PADs","cat":"Consumer_and_Commercial_Goods/Electronics","price":45.0,"volume":1.0,"desc":"@cargo/premium_pad.image@While costly, advanced developments in electronics now permit PADs that can be strapped to a wrist or sim"},{"file":"Consoles","cat":"Consumer_and_Commercial_Goods/Electronics","price":45.0,"volume":1.0,"desc":"@cargo/consoles.image@Popular descriptive name for a Central Entertainment System. These systems include wall mounted 2D video scr"},{"file":"Classical_Instruments","cat":"Consumer_and_Commercial_Goods/Luxury","price":1200.0,"volume":1.0,"desc":"@cargo/classical_instruments.image@Typically, those musical instruments designed and built before the age of industrialization. Us"},{"file":"Jewelry","cat":"Consumer_and_Commercial_Goods/Luxury","price":1200.0,"volume":0.1,"desc":"@cargo/jewelry.image@All sentients enjoy personal adornment. Both for the visual appearance alone, as well as to serve as a measur"},{"file":"Rare_Artwork","cat":"Consumer_and_Commercial_Goods/Luxury","price":105.0,"volume":2.0,"desc":"@cargo/rare_artwork.image@In the age of plasprints and holvids, the creations of the hand hold an especial value to today's connoi"},{"file":"Pearls","cat":"Consumer_and_Commercial_Goods/Luxury","price":1200.0,"volume":1.0,"desc":"@cargo/pearls.image@Pearls are formed from the concentric nacre secretions of a mollusc around an impurity. They are usually of on"},{"file":"Personal_Hygienics","cat":"Consumer_and_Commercial_Goods/Personal","price":110.0,"volume":1.0,"desc":"@cargo/personal_hygienics.image@As advanced as the sentient races have become, they have not escaped the need for a good scrubbing"},{"file":"Clothing","cat":"Consumer_and_Commercial_Goods/Personal","price":60.0,"volume":100.0,"desc":"@cargo/clothing.image@Clothing of all manner of make and manufacture can be sold in almost any region of inhabited space. Ranging "},{"file":"Aromatic_Scents","cat":"Consumer_and_Commercial_Goods/Personal","price":160.0,"volume":1.0,"desc":"@cargo/aromatic_scents.image@Scented oils, perfumes and fragrances derived from various plants and minerals that are pleasing to t"},{"file":"IntaTouch","cat":"Consumer_and_Commercial_Goods/Personal","price":50.0,"volume":4.0,"desc":"@cargo/intatouch.image@A tactile simulator that reminds provides an Aera with relaxing sensations."},{"file":"VirtuArea","cat":"Consumer_and_Commercial_Goods/Personal","price":50.0,"volume":1.0,"desc":"@cargo/virtuarea.image@A wall hanging that projects the illusion of open space."},{"file":"Robotic_Surgeons","cat":"Specialty_Goods/Medical","price":480.0,"volume":1.0,"desc":"@cargo/robotic_surgeons.image@While robotic assistance has long been the norm for medical procedures, generating an AI capable of "},{"file":"Regen_Tank","cat":"Specialty_Goods/Medical","price":742.0,"volume":5.0,"desc":"@cargo/regen_tank.image@With advances in DNA and cellular research, the medical establishment is now able to restore lost or damag"},{"file":"Cryogenic_Pods","cat":"Specialty_Goods/Medical","price":505.0,"volume":2.5,"desc":"@cargo/cryogenic_pods.image@For the last thousand years humans have been freezing themselves (or their heads) in the hope that the"},{"file":"Hyposyringes","cat":"Specialty_Goods/Medical","price":480.0,"volume":1.0,"desc":"@cargo/hyposyringes.image@After the medical lawsuits of last century, something was needed to stop certain segments of the medical"},{"file":"First_Aid_Kits","cat":"Specialty_Goods/Medical","price":480.0,"volume":10.0,"desc":"@cargo/first_aid_kits.image@While the contents have changed countless times, these kits can be found in every public transport and"},{"file":"Medical_Kit","cat":"Specialty_Goods/Medical","price":90.0,"volume":10.0,"desc":"@cargo/medical_kit.image@Given their somewhat similar chemical makeup, the Aera medical kit contains many items similar or analogo"},{"file":"Pseudotherms","cat":"Specialty_Goods/Medical","price":90.0,"volume":10.0,"desc":"@cargo/pseudotherms.image@The Aera originated on a warm world, and are subject to episodes of reduced functionality if caught unpr"},{"file":"DNA_Resequencer","cat":"Specialty_Goods/Medical","price":90.0,"volume":1.0,"desc":"@cargo/dna_resequencer.image@This portable device can take any DNA sample and transcribe it into the more familiar Rlaan analogs s"},{"file":"Cellular_Accelerant","cat":"Specialty_Goods/Medical","price":90.0,"volume":1.0,"desc":"@cargo/cellular_accelerant.image@A gel pack of complex organic muck that when applied to the site of an injury, will greatly incre"},{"file":"Simple_Medicines","cat":"Specialty_Goods/Pharmaceutical","price":25.0,"volume":1.0,"desc":"@cargo/simple_medicines.image@Common herbs, bandages and mixtures have use in a wide variety of applications. As life provides the"},{"file":"Vaccines","cat":"Specialty_Goods/Pharmaceutical","price":25.0,"volume":1.0,"desc":"@cargo/vaccines.image@With interstellar trade and war, the risk of infection from dangerous diseases and biological weapons requir"},{"file":"Advanced_Medicines","cat":"Specialty_Goods/Pharmaceutical","price":25.0,"volume":1.0,"desc":"@cargo/advanced_medicines.image@Artificially created or derived treatments used in the fight against all problems that occur while"},{"file":"Longevity_Drugs","cat":"Specialty_Goods/Pharmaceutical","price":25.0,"volume":1.0,"desc":"@cargo/longevity_drugs.image@The term longevity is a misnomer. While not extending life as such, these drugs DO ensure that one's "},{"file":"Blood_Plasma","cat":"Specialty_Goods/Pharmaceutical","price":25.0,"volume":1.0,"desc":"@cargo/blood_plasma.image@Each sentient species requires its own supply of interchangeable bodily fluids. Blood plasma is useful i"},{"file":"Enhanced_Limbs","cat":"Specialty_Goods/Augmentation","price":200.0,"volume":1.0,"desc":"@cargo/enhanced_limbs.image@When the limbs of a sentient being are just not up to the job, fiber enhancements, neuro drivers and s"},{"file":"Enhanced_Organs","cat":"Specialty_Goods/Augmentation","price":300.0,"volume":1.0,"desc":"@cargo/enhanced_organs.image@Sometimes genecrafting alone cannot provide the benefits desired. Whether organs are failing from age"},{"file":"Artificial_Limbs","cat":"Specialty_Goods/Augmentation","price":250.0,"volume":1.0,"desc":"@cargo/artificial_limbs.image@Whether a limb is lost, or a sentient needs performance over and above enhancements, these limbs, ma"},{"file":"Artificial_Organs","cat":"Specialty_Goods/Augmentation","price":300.0,"volume":1.0,"desc":"@cargo/artificial_organs.image@Where conditions are so dangerous that natural body organs wither and die, replacement artificial o"},{"file":"Neural_Interface","cat":"Specialty_Goods/Augmentation","price":205.0,"volume":0.1,"desc":"@cargo/neural_interface.image@The true pulse of an Andolian is not the calm beating of her heart, but the rampaging datastream of "},{"file":"Neural_Computer","cat":"Specialty_Goods/Augmentation","price":205.0,"volume":0.1,"desc":"@cargo/neural_computer.image@A development of neural interfaces, the neural computer acts as a secondary brain, often controlling "},{"file":"Full_Body_Augmentation","cat":"Specialty_Goods/Augmentation","price":205.0,"volume":1.0,"desc":"@cargo/fullbody.image@The full body package involves the replacement of all applicable limbs and organs with artificial versions, "},{"file":"Pleasure_Borgs","cat":"Specialty_Goods/Entertainment","price":530.0,"volume":2.0,"desc":"@cargo/pleasure_borgs.image@With the rise in dangerous transmitted diseases, self-cleansing pleasure borgs were developed to serve"},{"file":"Books","cat":"Specialty_Goods/Entertainment","price":50.0,"volume":1.0,"desc":"@cargo/books.image@A well-told tale still remains one of the chief forms of entertainment. Only the delivery of the tale changes. "},{"file":"Musik","cat":"Specialty_Goods/Entertainment","price":50.0,"volume":1.0,"desc":"@cargo/music.image@Being entertainment consisting of sound, music takes many forms ranging from classical melodies, to heavy beat "},{"file":"Holovids","cat":"Specialty_Goods/Entertainment","price":57.0,"volume":1.0,"desc":"@cargo/holovids.image@Mindless 3D visual entertainment for the masses. Especially popular among those with no noticeable social li"},{"file":"Erotica","cat":"Specialty_Goods/Entertainment","price":650.0,"volume":3.0,"desc":"@cargo/erotica.image@Consisting of a meld of most forms of entertainment (holovid, aromatic oil, music, and the odd pleasure borg)"},{"file":"Games","cat":"Specialty_Goods/Entertainment","price":52.0,"volume":1.0,"desc":"@cargo/games.image@Providing near endless possibility for gameplay and maximizing entertainment return, interactive computer games"},{"file":"Musical_Instruments","cat":"Specialty_Goods/Entertainment","price":52.0,"volume":1.0,"desc":"@cargo/musical_instruments.image@Collective description of contemporary music generation equipment. Commonly consisting of sound s"},{"file":"Surgical_Techniques","cat":"Research","price":55.0,"volume":0.01,"desc":"@cargo/surgical_techniques.image@The medical establishments of all species can appreciate the development of any techniques that a"},{"file":"Engineered_Bacteria","cat":"Research","price":560.0,"volume":0.02,"desc":"@cargo/engineered_bacteria.image@Engineered bacteria have been used for over a millennia - but the set of tasks gets bigger every "},{"file":"Quantum_Deductor","cat":"Research","price":420.0,"volume":1.0,"desc":"@upgrades/circuit2.image@The ever so polite name for the class of devices used to attack quantum cryptosystems."},{"file":"Virtual_Tunneling_Terminal","cat":"Research","price":240.0,"volume":1.0,"desc":"@cargo/virtual_tunneling_terminal.image@A device used for viewing and traversing the internals of macro-scale objects via tunnelli"},{"file":"Quantum_Computers","cat":"Research","price":75.0,"volume":1.0,"desc":"@cargo/quantum_processor.image@Featuring massive parallelism and minute feature size, a top of the line number cruncher can analyz"},{"file":"Cyborg_Defenders","cat":"Contraband","price":270.0,"volume":30.0,"desc":"@cargo/cyborg_mercs.image@The modern day equivalent to the private security officers of old, these cyborgs tend to be somewhat mor"},{"file":"Resistant_biologics","cat":"Contraband","price":90.0,"volume":1.0,"desc":"@cargo/resistant_biologics.image@While of potential legitimate use for research, these pathogens are deemed too dangerous to trans"},{"file":"Illegal_Weapons","cat":"Contraband","price":300.0,"volume":1.0,"desc":"@cargo/illegal_weapons.image@While it may seem odd, given the loose nature of the laws governing what armaments may be placed on c"},{"file":"Pilot","cat":"Contraband","price":760.0,"volume":2.0,"desc":"@cargo/pilot.image@Much as you may hate the pilot of the ship that attempted to destroy yours, destroying that pilot's ship does n"},{"file":"Slaves","cat":"Contraband","price":750.0,"volume":2.0,"desc":"@cargo/slaves.image@Illegal due to fears of interspecies domination, among a plethora of other reasons, economic inefficiencies lo"},{"file":"Clones","cat":"Contraband","price":720.0,"volume":200.0,"desc":"@cargo/clones.image@It is illegal to transport clones as mass cargo. Each clone must book individual passage at cabin rate on a ce"},{"file":"ISO_Propaganda","cat":"Contraband/Confed","price":100.0,"volume":1.0,"desc":"@cargo/swj.image@A fair portion of it's true a fair portion of the time, but all of it's illegal all of the time."},{"file":"ISO_Party_Member","cat":"Contraband/Confed","price":800.0,"volume":1.0,"desc":"@cargo/iso_member.image@Anyone in Confederation space willing to openly declare their membership in the ISO either has great forti"},{"file":"Socialist_Worker_Journal","cat":"Contraband/Confed","price":35.0,"volume":1.0,"desc":"@cargo/swj.image@The Socialist Worker Journal is a bi-monthly electronic publication believed to have its origins on Berkeley in t"},{"file":"Luddite_Religious_Tracts","cat":"Contraband/Confed","price":100.0,"volume":1.0,"desc":"@cargo/luddite_tracts.image@Carrying ISO propaganda will get one arrested.  Carrying luddite propaganda, outside of the more sympa"},{"file":"Escaped_Political_Prisoners","cat":"Contraband/Confed","price":920.0,"volume":1.0,"desc":"@cargo/political_prisoners.image@Are you now, or have you ever been, a member of the ISO?"},{"file":"Overeager_Immigrants","cat":"Contraband/Confed","price":160.0,"volume":200.0,"desc":"@cargo/overeager_immigrants.image@With the passing of the Confederation's so called 'Enough is Enough' legislation, it is illegal "},{"file":"ICBINF","cat":"Contraband/Rlaan","price":80.0,"volume":1.0,"desc":"@cargo/icbinf.image@Originally designed as a cheap, renewable, and environmentally friendly refrigerant, it was found to induce ex"},{"file":"Zhollus","cat":"Contraband/Rlaan","price":80.0,"volume":1.0,"desc":"@cargo/zhollus.image@A plant-like lifeform that, while exceptionally tasty to a Rlaan, is exceptionally devastating to a Rlaan fri"},{"file":"RetrifiedSalt","cat":"Contraband/Aera","price":80.0,"volume":1.0,"desc":"@cargo/retrified_salt.image@Salted crematory remains. Illegal in Aera space due to the combination of a cultural disdain for such "},{"file":"AeraNerveStimuli","cat":"Contraband/Aera","price":80.0,"volume":1.0,"desc":"@cargo/aeranervestimuli.image@Ever watched an Aera spasm in something that looks like a cross between an epileptic fit and an orga"}],"factions":["neutral","confed","andolian","klkk","highborn","homeland-security","hunter","LIHW","mechanist","merchant_guild","purist","shaper","dgn","unadorned","forsaken","shmrn"],"parts":[{"file":"laser","kind":"gun","cat":"upgrades/Weapons/Mounted_Guns_Light","price":3500.0,"desc":"@upgrades/light.image@Though not a laser by any stretch of the imagination, due to its resemblance to the so c"},{"file":"Ion_Burster","kind":"gun","cat":"upgrades/Weapons/Mounted_Guns_Light","price":7000.0,"desc":"@upgrades/beam2.image@One of the smallest of the ion weapon family, the Ion Burster, despite a seemingly proje"},{"file":"Micro_Driver","kind":"gun","cat":"upgrades/Weapons/Mounted_Guns_Light","price":10000.0,"desc":"@upgrades/accelerator_gun.image@Long before the dawn of modern man, it was known to various hominids that hurl"},{"file":"Mini_Driver","kind":"gun","cat":"upgrades/Weapons/Mounted_Guns_Medium","price":15000.0,"desc":"@upgrades/accelerator_gun.image@Long before the dawn of modern man, it was known to various hominids that hurl"},{"file":"Disruptor","kind":"gun","cat":"upgrades/Weapons/Mounted_Guns_Medium","price":60000.0,"desc":"@upgrades/beam1.image@A pulsed form of the shield-based disruptor beam technology, designs such as this have f"},{"file":"Pugilist","kind":"gun","cat":"upgrades/Weapons/Mounted_Guns_Light","price":75000.0,"desc":"@upgrades/beam1.image@The lightest and smallest of the disruptors manufactured by groups in Unadorned space, i"},{"file":"reactor01","kind":"reactor","cat":"upgrades/Reactors/Standard","price":500.0,"desc":"@upgrades/reactor.image@Energy production, the friendly fusion way."},{"file":"reactor02","kind":"reactor","cat":"upgrades/Reactors/Standard","price":1000.0,"desc":"@upgrades/reactor.image@Energy production, the friendly fusion way."},{"file":"reactor03","kind":"reactor","cat":"upgrades/Reactors/Standard","price":2000.0,"desc":"@upgrades/reactor.image@Energy production, the friendly fusion way."},{"file":"dualshield01","kind":"shield","cat":"upgrades/Shield_Systems/Standard_Dual_Shields","price":250.0,"desc":"@upgrades/shield2light.image@GEM shielding, with fore and aft decoupling."},{"file":"dualshield02","kind":"shield","cat":"upgrades/Shield_Systems/Standard_Dual_Shields","price":500.0,"desc":"@upgrades/shield2light.image@GEM shielding, with fore and aft decoupling."},{"file":"dualshield03","kind":"shield","cat":"upgrades/Shield_Systems/Standard_Dual_Shields","price":1000.0,"desc":"@upgrades/shield4light.image@GEM shielding, with fore and aft decoupling."},{"file":"dualshield04","kind":"shield","cat":"upgrades/Shield_Systems/Standard_Dual_Shields","price":2000.0,"desc":"@upgrades/shield4light.image@GEM shielding, with fore and aft decoupling."},{"file":"mult_overdrive01","kind":"engine","cat":"upgrades/Overdrive","price":4000.0,"desc":"@upgrades/afterburner_generic.image@Engine overdrive. Increases thrust at the expense of decreased fuel effici"},{"file":"mult_overdrive02","kind":"engine","cat":"upgrades/Overdrive","price":8000.0,"desc":"@upgrades/afterburner_generic.image@Engine overdrive. Increases thrust at the expense of decreased fuel effici"},{"file":"mult_overdrive03","kind":"engine","cat":"upgrades/Overdrive","price":16000.0,"desc":"@upgrades/afterburner_generic.image@Engine overdrive. Increases thrust at the expense of decreased fuel effici"},{"file":"add_spec_capacitor01","kind":"spec","cat":"upgrades/SPEC_Capacitors","price":6000.0,"desc":"@upgrades/reactor_capacitance.image@Capacitor for storing energy for FTL travel"},{"file":"add_spec_capacitor02","kind":"spec","cat":"upgrades/SPEC_Capacitors","price":18000.0,"desc":"@upgrades/reactor_capacitance.image@Capacitor for storing energy for FTL travel"},{"file":"add_spec_capacitor03","kind":"spec","cat":"upgrades/SPEC_Capacitors","price":32000.0,"desc":"@upgrades/reactor_capacitance.image@Capacitor for storing energy for FTL travel"},{"file":"armor01","kind":"armor","cat":"upgrades/Armor","price":4000.0,"desc":"@cargo/plasteel.image@Armor takes up no upgrade volume, but does add to the mass of your ship, affecting maneu"},{"file":"armor02","kind":"armor","cat":"upgrades/Armor","price":8000.0,"desc":"@cargo/isometal.image@Armor takes up no upgrade volume, but does add to the mass of your ship, affecting maneu"},{"file":"armor03","kind":"armor","cat":"upgrades/Armor","price":16000.0,"desc":"@cargo/hull_patches.image@Armor takes up no upgrade volume, but does add to the mass of your ship, affecting m"},{"file":"add_cargo_expansion","kind":"cargo","cat":"upgrades/Cargo","price":100000.0,"desc":"@cargo/cargo_expansion.image@Trades upgrade space and support systems for cargo volume"}]};
+
+/* ============================================================
+   Vega Strike web port - core: vec math, seeded RNG, market
+   model with stock dynamics, ship config, save/load
+   Units: 1 engine unit = 1 Mm = 1000 km. Credits = VS credits.
+   ============================================================ */
+"use strict";
+
+const V = {
+  add:(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]],
+  sub:(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],
+  scale:(a,k)=>[a[0]*k,a[1]*k,a[2]*k],
+  dot:(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],
+  cross:(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],
+  len:(a)=>Math.sqrt(a[0]*a[0]+a[1]*a[1]+a[2]*a[2]),
+  norm:(a)=>{const l=V.len(a)||1;return [a[0]/l,a[1]/l,a[2]/l];},
+  clone:(a)=>[a[0],a[1],a[2]],
+};
+const RAD = (d)=>d*Math.PI/180, DEG = (r)=>r*180/Math.PI;
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+const RAD2 = (d)=>d*Math.PI/180;
+
+function mulberry32(seed) {
+  let s = seed >>> 0;
+  return function() {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), 1 | t);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function hashStr(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619) & 0xFFFFFFFF;
+  return h >>> 0;
+}
+
+/* ---------- universe lookups ---------- */
+const SYS = {};
+for (const s of VS_DATA.systems) {
+  if (s.star) s.star.pos = [s.star.x, s.star.y, s.star.z];
+  for (const p of s.planets) p.pos = [p.x, p.y, p.z];
+  for (const b of s.bases) b.pos = [b.x, b.y, b.z];
+  for (const j of s.jumps) j.pos = [j.x, j.y, j.z];
+  SYS[s.name] = s;
+}
+const SYS_NAMES = VS_DATA.systems.map(s => s.name);
+const GOOD_BY_FILE = {};
+for (const g of VS_DATA.goods) GOOD_BY_FILE[g.file] = g;
+const SHIP_BY_NAME = {};
+for (const s of VS_DATA.ships) SHIP_BY_NAME[s.name] = s;
+
+function baseId(sname, bname) { return sname + "::" + bname; }
+function findBase(bid) {
+  const [sn, bn] = bid.split("::");
+  const s = SYS[sn];
+  if (!s) return null;
+  return s.bases.find(b => b.name === bn) || null;
+}
+function jumpsFrom(sname) { return SYS[sname].jumps; }
+
+/* ---------- economy (verified in scripts/vsport/verify_game.py) ----------
+   price(base, good, day) = good.price * mult
+   mult = seeded variation in [0.75,1.35] * stock response
+   stock response: x = (s0 - stock)/s0  ->  * clamp(1 + 0.35*x, 0.6, 1.6)
+   selling fills stock (price drops), buying empties it (price rises),
+   restock toward s0 at 0.8%/s. Contraband only traded at pirate bases. */
+const DAY_SEC = 600;
+function marketMult0(bid, gf, day) {
+  const rng = mulberry32(hashStr(bid + "|" + gf + "|" + day));
+  return 0.75 + 0.6 * rng();
+}
+function baseStock0(bid, gf) {
+  const rng = mulberry32(hashStr("stock|" + bid + "|" + gf));
+  const g = GOOD_BY_FILE[gf];
+  return Math.round(40 + rng() * 260 * (60 / Math.max(1, g.price)));
+}
+function goodPrice(bid, gf) {
+  const g = GOOD_BY_FILE[gf];
+  const st = ECON.stock[bid] && ECON.stock[bid][gf] !== undefined ? ECON.stock[bid][gf] : baseStock0(bid, gf);
+  const s0 = baseStock0(bid, gf);
+  const day = Math.floor(GAME.t / DAY_SEC);
+  let m = marketMult0(bid, gf, day);
+  m *= clamp(1 + 0.35 * (s0 - st) / s0, 0.6, 1.6);
+  return Math.max(1, Math.round(g.price * m));
+}
+const ECON = { stock: {}, day: 0 };
+function econInit() {
+  for (const s of VS_DATA.systems) for (const b of s.bases) {
+    const bid = baseId(s.name, b.name);
+    ECON.stock[bid] = {};
+    for (const g of VS_DATA.goods) ECON.stock[bid][g.file] = baseStock0(bid, g.file);
+  }
+}
+function econTick(dt) {
+  for (const bid in ECON.stock) {
+    const row = ECON.stock[bid];
+    for (const gf in row) {
+      const s0 = baseStock0(bid, gf);
+      row[gf] += (s0 - row[gf]) * 0.008 * dt;
+    }
+  }
+}
+function baseSellsContraband(bid) {
+  const b = findBase(bid);
+  return b && b.type === "pirate_base";
+}
+
+/* ---------- ship configs ---------- */
+function shipCfg(type) {
+  const s = SHIP_BY_NAME[type];
+  return {
+    type, desc: s.desc, role: s.role,
+    mass: s.mass, hullMax: s.hull, fuelMax: Math.max(25, s.fuel * 20),
+    holdMax: (type === "Llama.begin" || type === "Llama") ? 20000 :
+             (type === "Mule" || type === "Hidalgo") ? 800000 : 45000,
+    accel: type === "Llama.begin" || type === "Llama" ? 0.55 :
+           type === "Quicksilver" ? 0.95 :
+           type === "Dostoevsky" ? 0.75 :
+           type === "Admonisher" ? 0.85 : 0.35,
+    turn: RAD(100),
+    price: s.price,
+  };
+}
+function gunDmg(file) {
+  const p = { "laser":8, "Ion_Burster":12, "Micro_Driver":14, "Mini_Driver":16,
+              "Disruptor":22, "Pugilist":26 }[file] || 8;
+  return p;
+}
+function gunRof(file) { return 2.2; } // shots/s
+
+/* ---------- game state ---------- */
+const GAME = {
+  t: 0, system: "newconstantinople",
+  ship: null,            // player
+  npcs: [], projectiles: [],
+  target: null,          // npc id or "base:<bid>" or "jump:<idx>"
+  docked: null,          // bid while docked
+  missions: [], missionLog: [],
+  msg: "", msgT: 0,
+  paused: false, view: "chase", over: null, started: false,
+};
+function simMsg(m) { GAME.msg = m; GAME.msgT = 4.5; }
+
+/* ---------- player ship ---------- */
+function newShip(type, sys, pos) {
+  const cfg = shipCfg(type);
+  return {
+    player: true, id: "player", name: "your vessel", faction: "merchant_guild",
+    type, cfg,
+    pos: V.clone(pos), vel: [0,0,0],
+    fwd: [0.8,0.2,0.4], up: [0,0,1],
+    hull: cfg.hullMax, hullMax: cfg.hullMax,
+    shield: 100, shieldMax: 100,
+    fuel: cfg.fuelMax * 0.75,
+    gun: "laser", armorLevel: 0, reactorLevel: 0, overdrive: 0, specCap: 0, cargoAdd: 0,
+    assist: true, spec: false,
+    cargo: {},
+    cooldown: 0,
+    hostileTo: {},
+  };
+}
+function holdMax(ship) { return ship.cfg.holdMax + (ship.cargoAdd ? 60000 : 0); }
+function holdUsed(ship) {
+  let u = 0;
+  for (const gf in ship.cargo) u += ship.cargo[gf] * GOOD_BY_FILE[gf].volume;
+  return u;
+}
+function shieldMax(ship) { return 100 + ship.shieldLevel * 250; }
+function hullMaxEff(ship) { return ship.hullMax * (1 + ship.armorLevel * 0.25); }
+function thrustAccel(ship) { return ship.cfg.accel * (1 + ship.overdrive * 0.4); }
+
+/* ---------- damage ---------- */
+function applyDamage(ship, dmg) {
+  if (ship.shield > 0) {
+    const a = Math.min(ship.shield, dmg);
+    ship.shield -= a; dmg -= a;
+  }
+  if (dmg > 0) ship.hull -= dmg;
+  if (ship.hull <= 0) {
+    ship.hull = 0;
+    if (ship.player) { GAME.over = "destroyed"; }
+    else { ship.dead = true; }
+  }
+}
+
+/* ---------- save/load (localStorage) ---------- */
+function saveGame() {
+  if (GAME.docked === null) { simMsg("Save available at stations only"); return false; }
+  const s = GAME.ship;
+  const data = {
+    v: 1, t: GAME.t, system: GAME.system, docked: GAME.docked,
+    credits: PLAYER.credits,
+    ship: {
+      type: s.type, hull: s.hull, fuel: s.fuel, gun: s.gun,
+      armorLevel: s.armorLevel, reactorLevel: s.reactorLevel, shieldLevel: s.shieldLevel,
+      overdrive: s.overdrive, specCap: s.specCap, cargoAdd: s.cargoAdd,
+      cargo: s.cargo, assist: s.assist,
+    },
+    econ: ECON.stock, missions: GAME.missions, log: GAME.missionLog.slice(-40),
+  };
+  try {
+    localStorage.setItem("vs_web_save", JSON.stringify(data));
+    simMsg("Game saved");
+    sfx.beep();
+    return true;
+  } catch (e) { simMsg("Save failed: " + e.message); return false; }
+}
+function loadGame() {
+  const raw = localStorage.getItem("vs_web_save");
+  if (!raw) { simMsg("No saved game found"); return false; }
+  try {
+    const d = JSON.parse(raw);
+    newGame();
+    GAME.t = d.t; GAME.system = d.system; GAME.docked = d.docked;
+    PLAYER.credits = d.credits;
+    ECON.stock = d.econ || ECON.stock;
+    GAME.missions = d.missions || []; GAME.missionLog = d.log || [];
+    const s = GAME.ship;
+    Object.assign(s, d.ship);
+    s.cfg = shipCfg(d.ship.type);
+    s.hullMax = s.cfg.hullMax;
+    s.shield = shieldMax(s);
+    s.pos = V.add(findBase(GAME.docked).pos ? findBase(GAME.docked).pos : [0,0,0], [3.5,0,0]);
+    GAME.started = true; GAME.dockedOpen = true;
+    simMsg("Game loaded - docked at " + GAME.docked.split("::")[1]);
+    return true;
+  } catch (e) { simMsg("Load failed: " + e.message); return false; }
+}
+const PLAYER = { credits: 6000 };
+
+/* ============================================================
+   Vega Strike web port - flight & combat: thrust, flight
+   assist, SPEC drive, docking, jump points, projectiles, NPC AI
+   ============================================================ */
+
+const SPEC_MULT = 200;
+const ASSIST_K = 0.5;        // flight-assist drag (1/s)
+const DOCK_RANGE = 6;        // Mm
+const DOCK_SPEED = 3;        // Mm/s
+const JUMP_RANGE = 10;       // Mm
+
+function rotateBasis(ship, axis, ang) {
+  const c = Math.cos(ang), s = Math.sin(ang);
+  const rot = (vec) => V.add(V.add(V.scale(vec, c), V.scale(V.cross(axis, vec), s)), V.scale(axis, V.dot(axis, vec) * (1 - c)));
+  ship.fwd = V.norm(rot(ship.fwd));
+  const r = V.norm(V.cross(ship.fwd, ship.up));
+  ship.up = V.norm(V.cross(r, ship.fwd));
+  ship.right = r;
+}
+function ensureBasis(ship) {
+  if (!ship.right) ship.right = V.norm(V.cross(ship.fwd, ship.up));
+  ship.fwd = V.norm(ship.fwd);
+  const r = V.norm(V.cross(ship.fwd, ship.up));
+  ship.up = V.norm(V.cross(r, ship.fwd));
+  ship.right = r;
+}
+
+function flyShip(ship, input, dt) {
+  // input: {pitch, yaw, roll, thrust(0..1), boost}
+  ensureBasis(ship);
+  ship.cooldown = Math.max(0, ship.cooldown - dt);
+  const rate = ship.cfg.turn * dt;
+  if (input.pitch) rotateBasis(ship, ship.right, input.pitch * rate);
+  if (input.yaw)   rotateBasis(ship, ship.up, -input.yaw * rate);
+  if (input.roll)  rotateBasis(ship, ship.fwd, input.roll * rate);
+  const T = thrustAccel(ship) * (input.boost ? 2.2 : 1) * input.thrust;
+  if (T > 0) {
+    ship.vel = V.add(ship.vel, V.scale(ship.fwd, T * dt));
+    ship.fuel = Math.max(0, ship.fuel - 0.02 * dt * input.thrust);
+  }
+  if (ship.assist) {
+    const k = 1 - Math.exp(-ASSIST_K * dt);
+    ship.vel = V.sub(ship.vel, V.scale(ship.vel, k));
+  }
+  if (ship.spec && ship.fuel > 0) {
+    ship.vel = V.scale(ship.vel, 1 + (SPEC_MULT - 1) * Math.min(1, dt * 3));
+    ship.fuel = Math.max(0, ship.fuel - 0.25 * dt);
+    if (ship.fuel <= 0) { ship.spec = false; if (ship.player) simMsg("SPEC offline - fuel exhausted"); }
+  }
+  ship.pos = V.add(ship.pos, V.scale(ship.vel, dt));
+}
+
+/* ---------- gunnery ---------- */
+function fireGun(ship) {
+  if (ship.cooldown > 0 || GAME.docked) return;
+  const dmg = gunDmg(ship.gun) * (1 + (ship.reactorLevel || 0) * 0.15);
+  const right = ship.right || V.cross(ship.fwd, ship.up);
+  for (const off of [-0.14, 0.14]) {  // twin mounts, converged at 6 Mm
+    const spawn = V.add(ship.pos, V.add(V.scale(ship.fwd, 0.15), V.scale(right, off)));
+    const aim = V.add(ship.pos, V.scale(ship.fwd, 6));  // convergence point
+    const dir = V.norm(V.sub(aim, spawn));
+    GAME.projectiles.push({
+      pos: spawn,
+      vel: V.add(ship.vel, V.scale(dir, 6)),
+      owner: ship.id, dmg, life: 1.2, col: ship.player ? "#7fff9f" : "#ff9f7f",
+    });
+  }
+  ship.cooldown = 1 / gunRof(ship.gun);
+  if (ship.player) sfx.zap();
+}
+
+function stepProjectiles(dt) {
+  const ships = [GAME.ship, ...GAME.npcs].filter(s => s && !s.dead && !s.gone);
+  for (const p of GAME.projectiles) {
+    p.pos = V.add(p.pos, V.scale(p.vel, dt));
+    p.life -= dt;
+    for (const s of ships) {
+      if (p.owner === s.id) continue;
+      if (V.len(V.sub(p.pos, s.pos)) < 0.25) {
+        applyDamage(s, p.dmg);
+        p.life = 0;
+        p.hit = s.id;
+        if (p.owner === "player" && !s.player) {
+          // attacking a ship makes its faction hostile to you
+          s.hostileToPlayer = true;
+          if (GAME.target === s.id) UI.flashTarget = 0.2;
+        }
+        if (s.player) { UI.hudShake = 0.25; sfx.hit(); }
+        break;
+      }
+    }
+  }
+  GAME.projectiles = GAME.projectiles.filter(p => p.life > 0);
+}
+
+/* ---------- NPCs ---------- */
+let NPC_SEQ = 1;
+function spawnNPC(kind, sname, nearPos) {
+  const rng = mulberry32((hashStr(sname) + NPC_SEQ * 7919) >>> 0);
+  NPC_SEQ++;
+  let type, faction, name;
+  if (kind === "pirate") {
+    type = rng() < 0.75 ? "Dostoevsky" : "Hidalgo";
+    faction = "pirates";
+    name = "raider " + (100 + Math.floor(rng() * 900));
+  } else if (kind === "merchant") {
+    type = rng() < 0.6 ? "Llama" : (rng() < 0.5 ? "Mule" : "Quicksilver");
+    faction = rng() < 0.5 ? "merchant_guild" : "confed";
+    name = faction === "confed" ? "confed patrol " + (10 + Math.floor(rng() * 90)) : "trader " + (10 + Math.floor(rng() * 900));
+  } else {
+    type = "Admonisher";
+    faction = "confed";
+    name = "confed patrol " + (10 + Math.floor(rng() * 90));
+  }
+  const cfg = shipCfg(type);
+  const sys = SYS[sname];
+  const b = sys.bases[Math.floor(rng() * sys.bases.length)];
+  const pos = nearPos || V.add(b.pos, [(rng()-0.5)*40, (rng()-0.5)*40, (rng()-0.5)*40]);
+  const hullMax = cfg.hullMax * (faction === "pirates" && type === "Dostoevsky" ? 0.6 : 1);
+  const shieldMax = faction === "pirates" ? (type === "Hidalgo" ? 500 : 100) : (faction === "confed" ? 300 : 100);
+  return {
+    player: false, id: "npc" + NPC_SEQ, name, faction, type, cfg,
+    pos, vel: [(rng()-0.5)*0.6, (rng()-0.5)*0.6, (rng()-0.5)*0.6],
+    fwd: V.norm([(rng()-0.5), (rng()-0.5), (rng()-0.5)]), up: [0,0,1],
+    hull: hullMax, hullMax, shield: shieldMax, shieldMax,
+    fuel: 100, cargo: {}, cooldown: 0,
+    kind, behavior: kind === "pirate" ? "hunt" : (faction === "confed" ? "patrol" : "trade"),
+    hostileToPlayer: false, state: "cruise", targetPos: null, stateT: 0,
+  };
+}
+function npcHostilesIn(sname) {
+  return GAME.npcs.filter(n => !n.dead && n.kind === "pirate" && (n.hostileToPlayer || n.behavior === "hunt"));
+}
+function pirateDensity(sname) {
+  return ["saxtogue","nd-57","rikel","44-p-im"].includes(sname) ? 3 :
+         ["junction","aldebran","varnus"].includes(sname) ? 1 : 0;
+}
+function spawnSystemNPCs(sname) {
+  GAME.npcs = [];
+  GAME.projectiles = [];
+  const rng = mulberry32(hashStr("npcs|" + sname + "|" + Math.floor(GAME.t / 120)));
+  const np = pirateDensity(sname);
+  for (let k = 0; k < np; k++) GAME.npcs.push(spawnNPC("pirate", sname));
+  const merchants = 3 + Math.floor(rng() * 2);
+  for (let k = 0; k < merchants; k++) GAME.npcs.push(spawnNPC("merchant", sname));
+  if (pirateDensity(sname) > 1) GAME.npcs.push(spawnNPC("patrol", sname));
+}
+
+function steerToward(n, desired, dt, rateScale) {
+  const cur = n.fwd;
+  const dotv = clamp(V.dot(cur, desired), -1, 1);
+  const ang = Math.acos(dotv);
+  const step = Math.min(ang, n.cfg.turn * (rateScale || 0.5) * dt);
+  if (ang > 1e-4) {
+    const axis = V.norm(V.cross(cur, desired));
+    rotateBasis(n, axis, step);
+  }
+}
+function npcTick(n, dt) {
+  if (n.dead) return;
+  ensureBasis(n);
+  n.stateT -= dt;
+  n.cooldown = Math.max(0, n.cooldown - dt);
+  const player = GAME.ship;
+  const distP = V.len(V.sub(player.pos, n.pos));
+  let desired = n.fwd, thrust = 0.85;
+
+  if (n.behavior === "trade") {
+    if (!n.targetPos || n.stateT <= 0) {
+      const b = SYS[GAME.system].bases[Math.floor(Math.random() * SYS[GAME.system].bases.length)];
+      n.targetPos = V.add(b.pos, [(Math.random()-0.5)*6, (Math.random()-0.5)*6, (Math.random()-0.5)*6]);
+      n.stateT = 25 + Math.random() * 20;
+    }
+    const d = V.sub(n.targetPos, n.pos);
+    if (V.len(d) < 8) { n.vel = V.scale(n.vel, 1 - Math.min(1, dt * 2)); thrust = 0.15; }
+    desired = V.norm(d);
+  } else if (n.behavior === "patrol") {
+    // hunt pirates; otherwise cruise
+    const pirates = GAME.npcs.filter(x => x.kind === "pirate" && !x.dead);
+    let tgt = null, bd = 1e9;
+    for (const p of pirates) {
+      const d = V.len(V.sub(p.pos, n.pos));
+      if (d < bd) { bd = d; tgt = p; }
+    }
+    if (tgt && bd < 60) {
+      desired = V.norm(V.sub(tgt.pos, n.pos));
+      if (bd < 5 && n.cooldown <= 0) fireGunNPC(n, tgt);
+      thrust = bd > 3 ? 1 : 0.2;
+    } else if (!n.targetPos || n.stateT <= 0) {
+      n.targetPos = V.add(SYS[GAME.system].star ? SYS[GAME.system].star.pos || [0,0,0] : [0,0,0], [(Math.random()-0.5)*300, (Math.random()-0.5)*200, (Math.random()-0.5)*300]);
+      n.stateT = 20 + Math.random() * 15;
+    } else desired = V.norm(V.sub(n.targetPos, n.pos));
+  } else { // pirate hunt
+    if (distP < 90 && (n.hostileToPlayer || pirateHostileByDefault())) {
+      desired = V.norm(V.sub(player.pos, n.pos));
+      if (distP < 6.5 && n.cooldown <= 0) fireGunNPC(n, player);
+      thrust = distP > 2.5 ? 1 : 0.3;
+      if (distP < 1.5) desired = V.scale(V.norm(V.sub(player.pos, n.pos)), -0.3);
+    } else if (!n.targetPos || n.stateT <= 0) {
+      const b = SYS[GAME.system].bases[Math.floor(Math.random() * SYS[GAME.system].bases.length)];
+      n.targetPos = V.add(b.pos, [(Math.random()-0.5)*50, (Math.random()-0.5)*50, (Math.random()-0.5)*50]);
+      n.stateT = 18 + Math.random() * 15;
+    } else desired = V.norm(V.sub(n.targetPos, n.pos));
+  }
+  steerToward(n, desired, dt);
+  // integrate (assist-style)
+  n.vel = V.add(n.vel, V.scale(n.fwd, thrust * n.cfg.accel * dt));
+  n.vel = V.sub(n.vel, V.scale(n.vel, Math.min(1, ASSIST_K * dt)));
+  n.pos = V.add(n.pos, V.scale(n.vel, dt));
+}
+function pirateHostileByDefault() {
+  return GAME.npcs.filter(n => n.kind === "pirate").every(n => n.hostileToPlayer) || GAME.bountyActive === true;
+}
+function fireGunNPC(n, tgt) {
+  const dmg = gunDmg("laser") * 0.8;
+  const dir = V.norm(V.sub(tgt.pos, n.pos));
+  GAME.projectiles.push({
+    pos: V.add(n.pos, V.scale(dir, 0.2)),
+    vel: V.add(n.vel, V.scale(dir, 5.5)),
+    owner: n.id, dmg, life: 1.3, col: "#ff9f7f",
+  });
+  n.cooldown = 0.8;
+}
+
+/* ---------- docking & jumping ---------- */
+function nearestBase() {
+  const s = SYS[GAME.system];
+  let best = null, bd = 1e9;
+  for (const b of s.bases) {
+    const d = V.len(V.sub(b.pos, GAME.ship.pos));
+    if (d < bd) { bd = d; best = b; }
+  }
+  return { b: best, d: bd };
+}
+function nearestJump() {
+  const s = SYS[GAME.system];
+  let best = null, bd = 1e9, bi = -1;
+  s.jumps.forEach((j, i) => {
+    const d = V.len(V.sub(j.pos, GAME.ship.pos));
+    if (d < bd) { bd = d; best = j; bi = i; }
+  });
+  return { j: best, d: bd, i: bi };
+}
+function tryDock() {
+  const { b, d } = nearestBase();
+  if (!b || d > DOCK_RANGE) { simMsg("No station in range (" + (b ? d.toFixed(1) : "-") + " Mm, need < " + DOCK_RANGE + ")"); return; }
+  if (V.len(GAME.ship.vel) > DOCK_SPEED) { simMsg("Too fast to dock - slow to under " + DOCK_SPEED + " Mm/s"); return; }
+  GAME.docked = baseId(GAME.system, b.name);
+  GAME.dockedOpen = true;
+  UI.dockTab = "market";
+  GAME.ship.vel = [0,0,0]; GAME.ship.spec = false;
+  GAME.bountyActive = false;
+  // confed customs: contraband check (documented VS mechanic)
+  const bid = GAME.docked;
+  const hasContraband = Object.keys(GAME.ship.cargo).some(gf => gf.startsWith("Contraband/") || GOOD_BY_FILE[gf] && GOOD_BY_FILE[gf].cat.startsWith("Contraband"));
+  const bfac = b.faction;
+  if (hasContraband && (bfac === "confed" || bfac === "merchant_guild")) {
+    let seized = 0, fines = 0;
+    for (const gf in GAME.ship.cargo) {
+      if (GOOD_BY_FILE[gf].cat.startsWith("Contraband")) {
+        seized += GAME.ship.cargo[gf];
+        fines += goodPrice(bid, gf) * GAME.ship.cargo[gf];
+        delete GAME.ship.cargo[gf];
+      }
+    }
+    PLAYER.credits = Math.max(0, PLAYER.credits - Math.round(fines * 0.5));
+    simMsg("Customs: " + seized + " units of contraband seized, fined " + Math.round(fines * 0.5) + " cr");
+    sfx.bad();
+  } else {
+    simMsg("Docked at " + b.name);
+    sfx.beep();
+  }
+  checkMissions();
+  saveGame();
+}
+function undock() {
+  if (GAME.docked === null) return;
+  const b = findBase(GAME.docked);
+  GAME.docked = null; GAME.dockedOpen = false;
+  GAME.ship.pos = V.add(b.pos, V.scale(V.norm([1, 0.2, 0.4]), DOCK_RANGE * 1.3));
+  GAME.ship.vel = [0.6, 0.12, 0.24];
+  ensureBasis(GAME.ship);
+  simMsg("Undocked - good hunting");
+}
+function tryJump() {
+  if (GAME.jumpT !== undefined) return;
+  const { j, d, i } = nearestJump();
+  if (!j || d > JUMP_RANGE) { simMsg("No jump point in range"); return; }
+  GAME.jumpT = 0; GAME.jumpTo = j.dest;
+  sfx.jump();
+}
+function stepJump(dt) {
+  if (GAME.jumpT === undefined) return;
+  GAME.jumpT += dt;
+  if (GAME.jumpT > 2.5) {
+    GAME.system = GAME.jumpTo;
+    const dest = SYS[GAME.system];
+    if (dest.jumps.length) {
+      // arrive near the first jump point back
+      GAME.ship.pos = V.add(dest.jumps[0].pos, [3, 1, 2]);
+      GAME.ship.vel = [0.4, 0.1, 0.2];
+    } else GAME.ship.pos = [0, 0, 0];
+    ensureBasis(GAME.ship);
+    spawnSystemNPCs(GAME.system);
+    GAME.jumpT = undefined; GAME.jumpTo = null;
+    simMsg("Arrived in " + GAME.system);
+  }
+}
+
+/* ---------- missions ---------- */
+function genMission(bid) {
+  const rng = mulberry32(hashStr("miss|" + bid + "|" + Math.floor(GAME.t / 300)));
+  const [sn] = bid.split("::");
+  const s = SYS[sn];
+  const links = [...new Set(VS_DATA.links.filter(l => l.includes(sn)).map(l => l[0] === sn ? l[1] : l[0]))];
+  if (rng() < 0.6 && links.length) {
+    // cargo delivery
+    const legal = VS_DATA.goods.filter(g => !g.cat.startsWith("Contraband"));
+    const g = legal[Math.floor(rng() * legal.length)];
+    const qty = 8 + Math.floor(rng() * 25);
+    const destSn = links[Math.floor(rng() * links.length)];
+    const destBase = SYS[destSn].bases[Math.floor(rng() * SYS[destSn].bases.length)];
+    const pay = Math.round(qty * g.price * (0.35 + rng() * 0.5) + 800);
+    return { kind: "cargo", good: g.file, qty, from: bid, to: baseId(destSn, destBase.name), pay,
+             title: "Cargo: " + qty + " " + g.file.replace(/_/g, " ") + " to " + destBase.name + " (" + destSn + ")",
+             done: false };
+  } else {
+    const n = 2 + Math.floor(rng() * 3);
+    const pay = n * 1500 + Math.round(rng() * 800);
+    return { kind: "bounty", count: n, killed: 0, pay,
+             title: "Bounty: destroy " + n + " pirates", done: false };
+  }
+}
+function checkMissions() {
+  for (const m of GAME.missions) {
+    if (m.done) continue;
+    if (m.kind === "cargo" && GAME.docked === m.to) {
+      const have = GAME.ship.cargo[m.good] || 0;
+      if (have >= m.qty) {
+        GAME.ship.cargo[m.good] = have - m.qty;
+        PLAYER.credits += m.pay;
+        m.done = true;
+        GAME.missionLog.push("Delivered " + m.qty + " x " + m.good + " - paid " + m.pay + " cr");
+        simMsg("Mission complete: +" + m.pay + " cr");
+        sfx.win();
+      } else simMsg("Delivery needs " + m.qty + " x " + m.good + " (have " + have + ")");
+    }
+    if (m.kind === "bounty" && GAME.docked && m.killed >= m.count) {
+      PLAYER.credits += m.pay;
+      m.done = true;
+      GAME.missionLog.push("Bounty fulfilled - paid " + m.pay + " cr");
+      simMsg("Bounty paid: +" + m.pay + " cr");
+      sfx.win();
+    }
+  }
+  GAME.missions = GAME.missions.filter(m => !m.done || m.keep);
+}
+
+/* ============================================================
+   Vega Strike web port - render: chase-cam 3D projection,
+   procedural planets, vector ships, projectiles, radar, HUD
+   ============================================================ */
+
+const VIEW = { fov: 420, shake: 0 };
+
+/* ---------- procedural planet textures ---------- */
+const TEX = {};
+function makeTextures() {
+  const defs = {
+    sun:  ["#ffd060", "sun"], earthlike: ["#4f7bd9", "earth"],
+    rock: ["#a9907b", "rock"], ice: ["#cfe0ee", "rock"],
+    gas:  ["#d8b48c", "gas"], dark: ["#5a6478", "rock"],
+  };
+  for (const s of VS_DATA.systems) {
+    const list = [];
+    if (s.star) list.push([s.star, "sun"]);
+    for (const p of s.planets) {
+      const t = p.tex.toLowerCase();
+      let k = "rock";
+      if (t.includes("earth") || t.includes("forest") || t.includes("m_class")) k = "earthlike";
+      else if (t.includes("gas") || t.includes("jupiter") || t.includes("saturn") || t.includes("neptune") || t.includes("uranus")) k = "gas";
+      else if (t.includes("ice") || t.includes("snow")) k = "ice";
+      else if (t.includes("dirt") || t.includes("rock")) k = "rock";
+      list.push([p, k]);
+    }
+    for (const [obj, k] of list) {
+      const cv = document.createElement("canvas");
+      cv.width = cv.height = 64;
+      const c = cv.getContext("2d");
+      const rng = mulberry32(hashStr(s.name + obj.name));
+      c.fillStyle = defs[k][0]; c.fillRect(0, 0, 64, 64);
+      if (k === "sun") {
+        for (let i = 0; i < 380; i++) {
+          c.fillStyle = rng() < 0.5 ? "rgba(255,230,120,0.3)" : "rgba(255,120,20,0.3)";
+          c.fillRect(rng() * 64, rng() * 64, 2, 2);
+        }
+      } else if (k === "gas") {
+        let y = 0;
+        while (y < 64) {
+          const h = 3 + rng() * 8;
+          c.globalAlpha = 0.5 + rng() * 0.3;
+          c.fillStyle = rng() < 0.5 ? "#c9a97e" : "#e8d9b8";
+          c.fillRect(0, y, 64, h); y += h;
+        }
+        c.globalAlpha = 1;
+      } else if (k === "earthlike") {
+        for (let i = 0; i < 12; i++) {
+          c.fillStyle = "#3f9e44";
+          c.beginPath();
+          c.ellipse(rng() * 64, rng() * 64, 3 + rng() * 10, 2 + rng() * 6, rng() * 3, 0, 7);
+          c.fill();
+        }
+        for (let i = 0; i < 10; i++) {
+          c.fillStyle = "rgba(255,255,255,0.5)";
+          c.beginPath();
+          c.ellipse(rng() * 64, rng() * 64, 4 + rng() * 8, 2 + rng() * 2, 0, 0, 7);
+          c.fill();
+        }
+      } else {
+        for (let i = 0; i < 45; i++) {
+          const x = rng() * 64, y = rng() * 64, rr = 1 + rng() * 3.4;
+          c.fillStyle = "rgba(30,25,20,0.4)";
+          c.beginPath(); c.arc(x, y, rr, 0, 7); c.fill();
+        }
+      }
+      TEX[s.name + "/" + obj.name] = cv;
+    }
+  }
+}
+
+/* ---------- projection ---------- */
+const CAM = { pos: [0,0,0], fwd: [1,0,0], up: [0,0,1], right: [0,1,0] };
+function project(p, cx, cy, vw, vh) {
+  const rel = V.sub(p, CAM.pos);
+  const z = V.dot(rel, CAM.fwd);
+  if (z <= 0.2) return null;
+  const x = V.dot(rel, CAM.right), y = V.dot(rel, CAM.up);
+  return { x: cx + VIEW.fov * x / z, y: cy - VIEW.fov * y / z, z, sx: VIEW.fov / z };
+}
+
+/* ---------- starfield ---------- */
+const STARS = [];
+function makeStars() {
+  const rng = mulberry32(42);
+  for (let k = 0; k < 520; k++) {
+    const z = rng() * 2 - 1, th = rng() * Math.PI * 2, rr = Math.sqrt(1 - z * z);
+    STARS.push({ d: [rr * Math.cos(th), rr * Math.sin(th), z], m: rng() });
+  }
+}
+
+/* ---------- ship sprite drawing ---------- */
+const SHIP_SHAPES = {
+  Llama:      [[0,-0.6],[0.35,0.15],[0.12,0.5],[-0.12,0.5],[-0.35,0.15]],
+  Dostoevsky: [[0,-0.7],[0.3,-0.2],[0.42,0.35],[0,0.6],[-0.42,0.35],[-0.3,-0.2]],
+  Mule:       [[-0.5,-0.5],[0.5,-0.5],[0.5,0.35],[0.2,0.5],[-0.2,0.5],[-0.5,0.35]],
+  Quicksilver:[[0,-0.75],[0.22,0.2],[0.08,0.55],[-0.08,0.55],[-0.22,0.2]],
+  Admonisher: [[0,-0.75],[0.28,-0.3],[0.55,0.1],[0.3,0.55],[-0.3,0.55],[-0.55,0.1],[-0.28,-0.3]],
+  Hidalgo:    [[0,-0.65],[0.5,-0.1],[0.5,0.4],[-0.5,0.4],[-0.5,-0.1]],
+};
+const FAC_COLOR = {
+  pirates: "#ff6a5a", confed: "#7fa8ff", merchant_guild: "#7fffd4",
+  merchants: "#7fffd4", LIHW: "#ffd47f", ISO: "#e07fff",
+};
+function facCol(f) { return FAC_COLOR[f] || "#c8c8d4"; }
+
+function drawShipSprite(ctx, ship, X, Y, px, col) {
+  const shape = SHIP_SHAPES[ship.type] || SHIP_SHAPES.Llama;
+  // orient by projecting fwd/right onto screen plane
+  const fw = V.sub(ship.fwd, V.scale(CAM.fwd, V.dot(ship.fwd, CAM.fwd)));
+  const rt = V.sub(ship.right || V.cross(ship.fwd, ship.up), V.scale(CAM.fwd, V.dot(ship.right || [0,1,0], CAM.fwd)));
+  let ang = 0;
+  if (V.len(fw) > 1e-5) ang = Math.atan2(V.dot(fw, CAM.up), V.dot(fw, CAM.right));
+  else if (V.len(rt) > 1e-5) ang = Math.atan2(V.dot(rt, CAM.up), V.dot(rt, CAM.right)) + Math.PI / 2;
+  ctx.save();
+  ctx.translate(X, Y);
+  ctx.rotate(ang);
+  const s = Math.max(4, px);
+  ctx.strokeStyle = col; ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  shape.forEach((pt, i) => {
+    const pxp = pt[0] * s, pyp = -pt[1] * s;
+    if (i === 0) ctx.moveTo(pxp, pyp); else ctx.lineTo(pxp, pyp);
+  });
+  ctx.closePath(); ctx.stroke();
+  if (ship.player) { ctx.fillStyle = "rgba(127,255,159,0.25)"; ctx.fill(); }
+  ctx.restore();
+}
+
+/* ---------- main scene render ---------- */
+function renderScene(cx, cy, vw, vh) {
+  ctx.fillStyle = "#020208";
+  ctx.fillRect(0, 0, vw, vh);
+  const ship = GAME.ship;
+  // camera
+  const shake = UI.hudShake > 0 ? (Math.random()-0.5) * 6 * UI.hudShake : 0;
+  const camBack = 2.2, camUp = 0.7;
+  CAM.pos = V.sub(ship.pos, V.scale(ship.fwd, camBack));
+  CAM.pos = V.add(CAM.pos, V.scale(ship.up, camUp));
+  CAM.fwd = ship.fwd; CAM.up = ship.up; CAM.right = ship.right;
+  // stars
+  for (const st of STARS) {
+    const dz = V.dot(st.d, CAM.fwd);
+    if (dz < 0.06) continue;
+    const X = cx + VIEW.fov * (V.dot(st.d, CAM.right) / dz) + shake;
+    const Y = cy - VIEW.fov * (V.dot(st.d, CAM.up) / dz) + shake;
+    if (X < 0 || X > vw || Y < 0 || Y > vh) continue;
+    ctx.globalAlpha = 0.3 + st.m * 0.7;
+    ctx.fillStyle = "#dfe4ff";
+    ctx.fillRect(X, Y, st.m > 0.85 ? 2 : 1, st.m > 0.85 ? 2 : 1);
+  }
+  ctx.globalAlpha = 1;
+  const sys = SYS[GAME.system];
+  const drawList = [];
+  if (sys.star) drawList.push({ kind: "planet", obj: sys.star });
+  for (const p of sys.planets) drawList.push({ kind: "planet", obj: p });
+  for (const b of sys.bases) drawList.push({ kind: "base", obj: b });
+  for (const j of sys.jumps) drawList.push({ kind: "jump", obj: j });
+  for (const n of GAME.npcs) if (!n.dead) drawList.push({ kind: "ship", obj: n });
+  for (const p of GAME.projectiles) drawList.push({ kind: "proj", obj: p });
+  // depth sort
+  for (const d of drawList) d.z = V.dot(V.sub(d.obj.pos, CAM.pos), CAM.fwd);
+  drawList.sort((a, b) => b.z - a.z);
+
+  for (const d of drawList) {
+    const pr = project(d.obj.pos, cx, cy, vw, vh);
+    if (!pr) continue;
+    if (d.kind === "planet") {
+      const o = d.obj;
+      const px = Math.max(2, o.r * pr.sx);
+      if (pr.x < -px || pr.x > vw + px || pr.y < -px || pr.y > vh + px) continue;
+      const tex = TEX[GAME.system + "/" + o.name];
+      ctx.save();
+      ctx.beginPath(); ctx.arc(pr.x, pr.y, px, 0, 7); ctx.clip();
+      if (px < 6 || !tex) {
+        ctx.fillStyle = o === sys.star ? "#ffd060" : "#8898b8";
+        ctx.fillRect(pr.x - px, pr.y - px, px * 2, px * 2);
+      } else ctx.drawImage(tex, pr.x - px, pr.y - px, px * 2, px * 2);
+      // shading toward star
+      const sunDir = sys.star ? V.norm(V.sub(o.pos, sys.star.pos)) : [1,0,0];
+      const lx = V.dot(sunDir, CAM.right), ly = V.dot(sunDir, CAM.up);
+      const g = ctx.createRadialGradient(pr.x - lx * px * 0.9, pr.y + ly * px * 0.9, px * 0.15, pr.x, pr.y, px * 1.5);
+      g.addColorStop(0, "rgba(255,255,255,0.16)");
+      g.addColorStop(0.5, "rgba(0,0,0,0)");
+      g.addColorStop(1, "rgba(0,0,8,0.9)");
+      ctx.fillStyle = g; ctx.fillRect(pr.x - px, pr.y - px, px * 2 + 1, px * 2 + 1);
+      ctx.restore();
+      if (px > 14) {
+        ctx.fillStyle = "#8a93b8"; ctx.font = "10px 'Lucida Console', monospace";
+        ctx.fillText(o.name, pr.x + px + 4, pr.y + 3);
+      }
+    } else if (d.kind === "base") {
+      const px = Math.max(3, 0.5 * pr.sx);
+      ctx.strokeStyle = "#c8d4e8"; ctx.lineWidth = 1.2;
+      ctx.strokeRect(pr.x - px, pr.y - px, px * 2, px * 2);
+      ctx.beginPath(); ctx.moveTo(pr.x - px, pr.y); ctx.lineTo(pr.x + px, pr.y);
+      ctx.moveTo(pr.x, pr.y - px); ctx.lineTo(pr.x, pr.y + px); ctx.stroke();
+      if (px > 8 || d.z < 20) {
+        ctx.fillStyle = facCol(d.obj.faction);
+        ctx.font = "10px 'Lucida Console', monospace";
+        ctx.fillText(d.obj.name, pr.x + px + 3, pr.y + 3);
+      }
+    } else if (d.kind === "jump") {
+      const px = Math.max(3, 0.6 * pr.sx);
+      ctx.strokeStyle = "#c07fff"; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(pr.x, pr.y, px, 0, 7); ctx.stroke();
+      ctx.beginPath(); ctx.arc(pr.x, pr.y, px * 0.5, 0, 7); ctx.stroke();
+      if (d.z < 40) {
+        ctx.fillStyle = "#c07fff"; ctx.font = "10px 'Lucida Console', monospace";
+        ctx.fillText("jump: " + d.obj.dest.split("/")[1], pr.x + px + 3, pr.y + 3);
+      }
+    } else if (d.kind === "ship") {
+      const n = d.obj;
+      const px = clamp(1.1 * pr.sx, 3, 26);
+      drawShipSprite(ctx, n, pr.x, pr.y, px, facCol(n.faction));
+      if (GAME.target === n.id) {
+        ctx.strokeStyle = "#ffb400"; ctx.lineWidth = 1;
+        const r = px + 6;
+        ctx.beginPath();
+        ctx.moveTo(pr.x - r, pr.y - r + 4); ctx.lineTo(pr.x - r, pr.y - r); ctx.lineTo(pr.x - r + 4, pr.y - r);
+        ctx.moveTo(pr.x + r - 4, pr.y - r); ctx.lineTo(pr.x + r, pr.y - r); ctx.lineTo(pr.x + r, pr.y - r + 4);
+        ctx.moveTo(pr.x + r, pr.y + r - 4); ctx.lineTo(pr.x + r, pr.y + r); ctx.lineTo(pr.x + r - 4, pr.y + r);
+        ctx.moveTo(pr.x - r + 4, pr.y + r); ctx.lineTo(pr.x - r, pr.y + r); ctx.lineTo(pr.x - r, pr.y + r - 4);
+        ctx.stroke();
+      }
+      if (d.z < 30) {
+        ctx.fillStyle = facCol(n.faction); ctx.font = "9px 'Lucida Console', monospace";
+        ctx.fillText(n.name + " " + d.z.toFixed(1) + " Mm", pr.x + px + 3, pr.y - 3);
+      }
+    } else if (d.kind === "proj") {
+      ctx.fillStyle = d.obj.col;
+      ctx.fillRect(pr.x - 1.5, pr.y - 1.5, 3, 3);
+    }
+  }
+
+  // crosshair + lead reticle for targeted ship
+  const tgt = GAME.npcs.find(n => n.id === GAME.target);
+  if (tgt && !tgt.dead) {
+    const rel = V.sub(tgt.pos, ship.pos);
+    const closing = V.len(V.sub(tgt.vel, ship.vel));
+    const t = V.len(rel) / 6;
+    const lead = V.add(tgt.pos, V.scale(V.sub(tgt.vel, ship.vel), t));
+    const prl = project(lead, cx, cy, vw, vh);
+    if (prl) {
+      ctx.strokeStyle = "#ffb400";
+      ctx.beginPath(); ctx.arc(prl.x, prl.y, 4, 0, 7); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(prl.x - 7, prl.y); ctx.lineTo(prl.x - 3, prl.y);
+      ctx.moveTo(prl.x + 3, prl.y); ctx.lineTo(prl.x + 7, prl.y); ctx.stroke();
+    }
+  }
+}
+
+/* ---------- radar ---------- */
+function renderRadar(cx, cy, R) {
+  ctx.strokeStyle = "#28304a"; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, R * 0.55, 0, 7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx - R, cy); ctx.lineTo(cx + R, cy);
+  ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R); ctx.stroke();
+  const ship = GAME.ship;
+  const blip = (pos, col, kind) => {
+    const rel = V.sub(pos, ship.pos);
+    let z = V.dot(rel, ship.fwd);
+    const x = V.dot(rel, ship.right), y = V.dot(rel, ship.up);
+    const rng = 160;
+    const k = R / rng;
+    const front = z >= 0;
+    if (Math.abs(z) > rng || Math.abs(x) > rng || Math.abs(y) > rng) {
+      const mx = Math.max(Math.abs(z), Math.abs(x), Math.abs(y)) / rng;
+      z /= mx; var xx = x / mx; var yy = y / mx;
+    } else { var xx = x, yy = y; }
+    const bx = cx + xx * k, by = cy - yy * k;
+    ctx.fillStyle = col;
+    if (!front) {
+      ctx.strokeStyle = col;
+      ctx.strokeRect(bx - 1.5, by - 1.5, 3, 3);
+    } else ctx.fillRect(bx - 1.5, by - 1.5, 3, 3);
+  };
+  for (const n of GAME.npcs) if (!n.dead) blip(n.pos, facCol(n.faction), "ship");
+  const sys = SYS[GAME.system];
+  for (const b of sys.bases) blip(b.pos, "#c8d4e8", "base");
+  for (const j of sys.jumps) blip(j.pos, "#c07fff", "jump");
+  if (sys.star) blip(sys.star.pos, "#ffd060", "sun");
+  for (const p of sys.planets) blip(p.pos, "#8898b8", "planet");
+}
+
+/* ============================================================
+   Vega Strike web port - UI: flight HUD, station dialogs
+   (market / shipyard / missions), galaxy map, help
+   ============================================================ */
+
+const UI = { hits: [], hover: null, dockTab: "market", marketScroll: 0, boardScroll: 0,
+             hudShake: 0, flashTarget: 0, mapOpen: false, helpOpen: false, aboutOpen: false };
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+ctx.imageSmoothingEnabled = false;
+
+function fmtCr(n) {
+  n = Math.round(n);
+  return n.toLocaleString("en-US");
+}
+function fmtDist(km) {
+  if (km < 1e4) return km.toFixed(0) + " km";
+  return (km / 1000).toFixed(1) + " Mm";
+}
+function goodName(gf) { return gf.split("/").pop().replace(/_/g, " "); }
+
+function btn(x, y, w, h, label, cb, opts = {}) {
+  const hov = UI.hover && UI.hover.x === x && UI.hover.y === y;
+  ctx.fillStyle = opts.dark ? (hov ? "#2c3454" : "#1a2038") : (hov ? "#2e3654" : "#20263e");
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = opts.active ? "#ffb400" : (opts.dark ? "#3a4468" : "#4a5478");
+  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  ctx.fillStyle = opts.active ? "#ffb400" : opts.col || "#c8d0e8";
+  ctx.font = (opts.big ? "bold 12" : "11") + "px 'Lucida Console', monospace";
+  ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  ctx.fillText(label, x + w / 2, y + h / 2 + 0.5);
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  UI.hits.push({ x, y, w, h, cb });
+}
+
+/* ---------- flight HUD ---------- */
+function renderHUD(vw, vh) {
+  const s = GAME.ship;
+  const spd = V.len(s.vel) * 1000; // km/s
+  ctx.font = "11px 'Lucida Console', monospace";
+  // top-left: credits, cargo, fuel
+  ctx.fillStyle = "#9aa4c0";
+  ctx.fillText("CREDITS  " + fmtCr(PLAYER.credits), 12, 20);
+  ctx.fillText("CARGO    " + Math.round(holdUsed(s)).toLocaleString("en-US") + " / " + holdMax(s).toLocaleString("en-US") + " L", 12, 34);
+  ctx.fillText("FUEL     " + s.fuel.toFixed(1) + " / " + s.cfg.fuelMax.toFixed(0), 12, 48);
+  ctx.fillText("SYSTEM   " + GAME.system, 12, 62);
+  // hull/shield bars
+  bar(12, 70, 130, 7, s.hull / hullMaxEff(s), s.hull / hullMaxEff(s) < 0.3 ? "#e04030" : "#00b000");
+  bar(12, 80, 130, 7, s.shield / shieldMax(s), "#3f7fe0");
+  // speed + assist + spec
+  ctx.fillStyle = "#e8ecff";
+  ctx.fillText(spd.toFixed(0) + " km/s" + (s.spec ? "  [SPEC x" + SPEC_MULT + "]" : "") + (s.assist ? "" : "  [NEWTONIAN]"), 12, vh - 12);
+  // hint
+  ctx.fillStyle = "#5a6488";
+  ctx.fillText("W/S throttle \u00b7 arrows turn \u00b7 Q/E roll \u00b7 F fire \u00b7 T target enemy \u00b7 V spec \u00b7 N assist \u00b7 D dock \u00b7 J jump \u00b7 M map \u00b7 H help", 12, vh - 26);
+  // message
+  if (GAME.msgT > 0) {
+    ctx.fillStyle = "#ffe27f"; ctx.font = "bold 13px 'Lucida Console', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText(GAME.msg, vw / 2, 108);
+    ctx.textAlign = "left";
+  }
+  // dock/jump prompts
+  const { b, d } = nearestBase();
+  if (b && d < DOCK_RANGE * 2) {
+    ctx.fillStyle = d < DOCK_RANGE && V.len(s.vel) < DOCK_SPEED ? "#7fff9f" : "#c8d0e8";
+    ctx.font = "bold 12px 'Lucida Console', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText((d < DOCK_RANGE && V.len(s.vel) < DOCK_SPEED ? "[D] DOCK " : "") + b.name + "  " + fmtDist(d * 1000), vw / 2, vh / 2 + 90);
+    ctx.textAlign = "left";
+  }
+  const { j, d: jd } = nearestJump();
+  if (j && jd < JUMP_RANGE * 2) {
+    ctx.fillStyle = jd < JUMP_RANGE ? "#c07fff" : "#8a93b8";
+    ctx.font = "bold 12px 'Lucida Console', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText((jd < JUMP_RANGE ? "[J] JUMP -> " : "jump point: ") + j.dest.split("/")[1] + "  " + fmtDist(jd * 1000), vw / 2, vh / 2 + 106);
+    ctx.textAlign = "left";
+  }
+  // target panel top-right
+  const tgt = GAME.npcs.find(n => n.id === GAME.target);
+  if (tgt && !tgt.dead) {
+    const x = vw - 190;
+    ctx.fillStyle = facCol(tgt.faction); ctx.font = "bold 12px 'Lucida Console', monospace";
+    ctx.fillText(tgt.name, x, 20);
+    ctx.fillStyle = "#8a93b8"; ctx.font = "11px 'Lucida Console', monospace";
+    ctx.fillText(tgt.faction + " / " + tgt.type, x, 34);
+    const dist = fmtDist(V.len(V.sub(tgt.pos, s.pos)) * 1000);
+    ctx.fillText(dist, x, 48);
+    bar(x, 54, 170, 6, tgt.shield / tgt.shieldMax, "#3f7fe0");
+    bar(x, 62, 170, 6, tgt.hull / tgt.hullMax, "#e04030");
+  }
+  // radar bottom-left
+  renderRadar(70, vh - 90, 58);
+  // jump tunnel overlay
+  if (GAME.jumpT !== undefined) {
+    ctx.fillStyle = "rgba(90,40,140,0.35)";
+    ctx.fillRect(0, 0, vw, vh);
+    ctx.fillStyle = "#e8d4ff"; ctx.font = "bold 16px 'Lucida Console', monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("JUMPING TO " + GAME.jumpTo.toUpperCase(), vw / 2, vh / 2);
+    ctx.textAlign = "left";
+  }
+}
+function bar(x, y, w, h, frac, col) {
+  frac = clamp(frac, 0, 1);
+  ctx.fillStyle = "#20263e"; ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = col; ctx.fillRect(x + 1, y + 1, (w - 2) * frac, h - 2);
+  ctx.strokeStyle = "#3a4468"; ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+}
+
+/* ---------- station dialog ---------- */
+function renderStation(vw, vh) {
+  const bid = GAME.docked;
+  const b = findBase(bid);
+  if (!b) return;
+  const x = 60, y = 30, w = 680, h = 540;
+  ctx.fillStyle = "rgba(2,4,12,0.92)"; ctx.fillRect(0, 0, vw, vh);
+  ctx.fillStyle = "#0c1124"; ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = "#4a5478"; ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  ctx.fillStyle = "#000080"; ctx.fillRect(x + 2, y + 2, w - 4, 22);
+  ctx.fillStyle = "#e8ecff"; ctx.font = "bold 12px 'Lucida Console', monospace";
+  ctx.fillText(b.name.toUpperCase() + "  \u00b7  " + GAME.system + "  \u00b7  " + b.faction.toUpperCase(), x + 12, y + 17);
+  ctx.textAlign = "right";
+  ctx.fillText(fmtCr(PLAYER.credits) + " cr", x + w - 12, y + 17);
+  ctx.textAlign = "left";
+  // tabs
+  const tabs = [["market", "MARKET"], ["shipyard", "SHIPYARD"], ["missions", "MISSIONS"], ["bar", "INFO"]];
+  let tx = x + 12;
+  for (const [id, label] of tabs) {
+    btn(tx, y + 32, 108, 24, label, () => { UI.dockTab = id; UI.marketScroll = 0; }, { active: UI.dockTab === id, dark: true });
+    tx += 114;
+  }
+  btn(x + w - 100, y + 32, 88, 24, "LAUNCH", () => undock(), { active: true, dark: true });
+  const py = y + 66;
+  if (UI.dockTab === "market") renderMarket(x + 12, py, w - 24, h - 100, bid, b);
+  else if (UI.dockTab === "shipyard") renderShipyard(x + 12, py, w - 24, h - 100, bid);
+  else if (UI.dockTab === "missions") renderBoard(x + 12, py, w - 24, h - 100, bid);
+  else renderInfo(x + 12, py, w - 24, h - 100, b);
+}
+
+function renderMarket(x, y, w, h, bid, b) {
+  const s = GAME.ship;
+  ctx.font = "11px 'Lucida Console', monospace";
+  ctx.fillStyle = "#5a6488";
+  ctx.fillText("GOOD" + " ".repeat(26) + "PRICE      STOCK     CARGO        BUY     SELL", x, y + 4);
+  const goods = VS_DATA.goods.filter(g => !g.cat.startsWith("Contraband") || baseSellsContraband(bid));
+  const rowH = 17, vis = Math.floor((h - 24) / rowH);
+  UI.marketScroll = clamp(UI.marketScroll, 0, Math.max(0, goods.length - vis));
+  let yy = y + 20;
+  for (let k = UI.marketScroll; k < Math.min(goods.length, UI.marketScroll + vis); k++) {
+    const g = goods[k];
+    const price = goodPrice(bid, g.file);
+    const stock = ECON.stock[bid][g.file];
+    const have = s.cargo[g.file] || 0;
+    const y0 = yy - 10;
+    if (k % 2 === 0) { ctx.fillStyle = "rgba(40,48,80,0.35)"; ctx.fillRect(x, y0, w, rowH); }
+    ctx.fillStyle = g.cat.startsWith("Contraband") ? "#ff9f7f" : "#c8d0e8";
+    ctx.fillText(goodName(g.file).slice(0, 26), x, yy);
+    ctx.fillStyle = "#7fff9f";
+    ctx.fillText(String(price).padStart(7), x + 210, yy);
+    ctx.fillStyle = "#8a93b8";
+    ctx.fillText(String(Math.round(stock)).padStart(6), x + 296, yy);
+    ctx.fillStyle = have > 0 ? "#ffb400" : "#5a6488";
+    ctx.fillText(String(have).padStart(6), x + 380, yy);
+    const canBuy = PLAYER.credits >= price && holdUsed(s) + g.volume <= holdMax(s) && stock > 0;
+    btn(x + w - 116, y0 + 2, 52, 13, "BUY", () => trade(bid, g.file, 1, price), { dark: true, col: canBuy ? "#7fff9f" : "#5a6488" });
+    btn(x + w - 58, y0 + 2, 52, 13, "SELL", () => trade(bid, g.file, -1, price), { dark: true, col: have > 0 ? "#ffb400" : "#5a6488" });
+    yy += rowH;
+  }
+  // scroll buttons + buy/sell 10
+  btn(x, y + h - 18, 60, 14, "\u25b2 UP", () => { UI.marketScroll -= 5; }, { dark: true });
+  btn(x + 66, y + h - 18, 60, 14, "\u25bc DOWN", () => { UI.marketScroll += 5; }, { dark: true });
+  ctx.fillStyle = "#5a6488";
+  ctx.fillText("hold volume " + (holdUsed(s)/1000).toFixed(1) + "k / " + (holdMax(s)/1000).toFixed(0) + " L \u00b7 prices respond to stock (buy up = dearer, dump = cheaper)", x + 140, y + h - 7);
+}
+
+function trade(bid, gf, dir, price) {
+  const s = GAME.ship;
+  if (dir > 0) {
+    const g = GOOD_BY_FILE[gf];
+    const space = Math.floor((holdMax(s) - holdUsed(s)) / g.volume);
+    const afford = Math.floor(PLAYER.credits / price);
+    const stock = ECON.stock[bid][gf];
+    const qty = Math.min(1, space, afford, stock);
+    if (qty <= 0) { simMsg(space <= 0 ? "Cargo hold full" : afford <= 0 ? "Not enough credits" : "No stock"); return; }
+    s.cargo[gf] = (s.cargo[gf] || 0) + qty;
+    PLAYER.credits -= price * qty;
+    ECON.stock[bid][gf] -= qty;
+    sfx.beep();
+  } else {
+    const have = s.cargo[gf] || 0;
+    if (have <= 0) { simMsg("Nothing to sell"); return; }
+    s.cargo[gf] -= 1;
+    if (s.cargo[gf] <= 0) delete s.cargo[gf];
+    PLAYER.credits += price;
+    ECON.stock[bid][gf] += 1;
+    sfx.beep();
+  }
+}
+
+function renderShipyard(x, y, w, h, bid) {
+  ctx.font = "11px 'Lucida Console', monospace";
+  ctx.fillStyle = "#5a6488";
+  ctx.fillText("UPGRADE" + " ".repeat(21) + "EFFECT       PRICE       INSTALL", x, y + 4);
+  const s = GAME.ship;
+  const effect = (p) => {
+    switch (p.kind) {
+      case "gun": return "+" + gunDmg(p.file) + " dmg/gun";
+      case "shield": return "+250 shield";
+      case "armor": return "+25% hull";
+      case "reactor": return "+15% dmg, +regen";
+      case "engine": return "+40% thrust";
+      case "spec": return "+25 SPEC fuel cap";
+      case "cargo": return "+60000 L hold";
+    }
+  };
+  const parts = VS_DATA.parts;
+  const rowH = 20, vis = Math.floor((h - 30) / rowH);
+  UI.marketScroll = clamp(UI.marketScroll, 0, Math.max(0, parts.length - vis));
+  let yy = y + 20;
+  for (let k = UI.marketScroll; k < Math.min(parts.length, UI.marketScroll + vis); k++) {
+    const p = parts[k];
+    const y0 = yy - 12;
+    if (k % 2 === 0) { ctx.fillStyle = "rgba(40,48,80,0.35)"; ctx.fillRect(x, y0, w, rowH); }
+    ctx.fillStyle = "#c8d0e8";
+    ctx.fillText(p.file.replace(/_/g, " ").slice(0, 28), x, yy);
+    ctx.fillStyle = "#7fbfff";
+    ctx.fillText(effect(p), x + 220, yy);
+    ctx.fillStyle = "#7fff9f";
+    ctx.fillText(fmtCr(p.price), x + 370, yy);
+    const owned = (p.kind === "gun" && s.gun === p.file) ||
+      (p.kind === "shield" && s.shieldLevel >= k + 1) ||
+      (p.kind === "armor" && s.armorLevel >= k + 1) ||
+      (p.kind === "reactor" && s.reactorLevel >= k + 1) ||
+      (p.kind === "engine" && s.overdrive >= k + 1) ||
+      (p.kind === "spec" && s.specCap >= k + 1) ||
+      (p.kind === "cargo" && s.cargoAdd > 0);
+    btn(x + w - 80, y0 + 3, 72, 14, owned ? "OWNED" : "INSTALL",
+        () => buyPart(p, k, bid), { dark: true, active: !owned, col: owned ? "#5a6488" : "#7fff9f" });
+    yy += rowH;
+  }
+  btn(x, y + h - 18, 60, 14, "\u25b2 UP", () => { UI.marketScroll -= 5; }, { dark: true });
+  btn(x + 66, y + h - 18, 60, 14, "\u25bc DOWN", () => { UI.marketScroll += 5; }, { dark: true });
+  // repair + refuel line
+  const repCost = Math.ceil((hullMaxEff(s) - s.hull) * 4);
+  const fuelNeed = Math.ceil(s.cfg.fuelMax * (1 + s.specCap * 0.5) - s.fuel);
+  const refuelCost = Math.ceil(fuelNeed * 5);
+  btn(x + 140, y + h - 20, 150, 16, "REPAIR (" + fmtCr(repCost) + " cr)", () => {
+    const c = Math.min(repCost, PLAYER.credits);
+    PLAYER.credits -= Math.ceil((hullMaxEff(s) - s.hull) * 4);
+    s.hull = hullMaxEff(s);
+    simMsg("Hull repaired"); sfx.beep();
+  }, { dark: true, col: repCost > 0 && PLAYER.credits >= repCost ? "#7fff9f" : "#5a6488" });
+  btn(x + 300, y + h - 20, 160, 16, "REFUEL (" + fmtCr(refuelCost) + " cr)", () => {
+    PLAYER.credits -= refuelCost;
+    s.fuel = s.cfg.fuelMax * (1 + s.specCap * 0.5);
+    simMsg("Tanks topped up"); sfx.beep();
+  }, { dark: true, col: refuelCost > 0 && PLAYER.credits >= refuelCost ? "#7fff9f" : "#5a6488" });
+}
+
+function buyPart(p, k, bid) {
+  const s = GAME.ship;
+  if (PLAYER.credits < p.price) { simMsg("Not enough credits"); sfx.bad(); return; }
+  PLAYER.credits -= p.price;
+  switch (p.kind) {
+    case "gun": s.gun = p.file; break;
+    case "shield": s.shieldLevel = k + 1; s.shield = shieldMax(s); break;
+    case "armor": s.armorLevel = k + 1; break;
+    case "reactor": s.reactorLevel = k + 1; break;
+    case "engine": s.overdrive = k + 1; break;
+    case "spec": s.specCap = k + 1; break;
+    case "cargo": s.cargoAdd = 1; break;
+  }
+  simMsg(p.file.replace(/_/g, " ") + " installed");
+  sfx.win();
+}
+
+function renderBoard(x, y, w, h, bid) {
+  ctx.font = "11px 'Lucida Console', monospace";
+  // active missions
+  let yy = y + 4;
+  ctx.fillStyle = "#ffb400"; ctx.font = "bold 11px 'Lucida Console', monospace";
+  ctx.fillText("ACTIVE MISSIONS", x, yy); yy += 16;
+  ctx.font = "11px 'Lucida Console', monospace";
+  const active = GAME.missions.filter(m => !m.done);
+  if (!active.length) { ctx.fillStyle = "#5a6488"; ctx.fillText("none - accept work below", x, yy); yy += 16; }
+  for (const m of active) {
+    ctx.fillStyle = "#c8d0e8";
+    ctx.fillText((m.kind === "bounty" ? "[" + m.killed + "/" + m.count + "] " : "") + m.title, x, yy);
+    ctx.fillStyle = "#7fff9f";
+    ctx.fillText(fmtCr(m.pay) + " cr", x + w - 90, yy);
+    yy += 15;
+  }
+  yy += 8;
+  ctx.fillStyle = "#ffb400"; ctx.font = "bold 11px 'Lucida Console', monospace";
+  ctx.fillText("AVAILABLE WORK", x, yy); yy += 16;
+  ctx.font = "11px 'Lucida Console', monospace";
+  if (!GAME.boardCache || GAME.boardCache.bid !== bid) {
+    GAME.boardCache = { bid, offers: [genMission(bid), genMission(bid + "|" + Math.floor(GAME.t)), genMission(bid + "||" + Math.floor(GAME.t))] };
+  }
+  for (const m of GAME.boardCache.offers) {
+    ctx.fillStyle = "#c8d0e8";
+    ctx.fillText(m.title.slice(0, 66), x, yy);
+    ctx.fillStyle = "#7fff9f";
+    ctx.fillText(fmtCr(m.pay) + " cr", x + w - 90, yy);
+    btn(x + w - 160, yy - 12, 64, 15, "ACCEPT", () => {
+      if (GAME.missions.filter(m2 => !m2.done).length >= 2) { simMsg("Mission computer: max 2 active jobs"); return; }
+      GAME.missions.push(m);
+      if (m.kind === "bounty") GAME.bountyActive = true;
+      GAME.boardCache.offers = GAME.boardCache.offers.filter(o => o !== m);
+      simMsg("Mission accepted"); sfx.beep();
+    }, { dark: true, active: true });
+    yy += 22;
+  }
+  yy += 6;
+  ctx.fillStyle = "#5a6488";
+  ctx.fillText("cargo jobs: be at the destination station with the goods loaded \u00b7 bounties: kill pirates, then dock anywhere", x, yy);
+}
+
+function renderInfo(x, y, w, h, b) {
+  const lines = [
+    ["Station", b.name + " (" + b.faction + ")"],
+    ["System", GAME.system + " - " + SYS[GAME.system].planets.length + " planets, " + SYS[GAME.system].bases.length + " stations"],
+    ["Jump links", SYS[GAME.system].jumps.map(j => j.dest.split("/")[1]).join(", ")],
+    ["Ship", GAME.ship.type + " - " + GAME.ship.cfg.role],
+    ["", GAME.ship.cfg.desc || ""],
+    ["Funds", fmtCr(PLAYER.credits) + " cr"],
+    ["Hull", Math.round(GAME.ship.hull) + " / " + Math.round(hullMaxEff(GAME.ship))],
+    ["", ""],
+    ["Local news", "pirate activity: " + (pirateDensity(GAME.system) ? "REPORTED - travel armed" : "none in this system")],
+    ["", "confed customs inspect cargo at lawful stations"],
+    ["", "the Gemini sector remembers: fly safe, trader"],
+  ];
+  ctx.font = "12px 'Lucida Console', monospace";
+  let yy = y + 14;
+  for (const [k, v] of lines) {
+    if (k) { ctx.fillStyle = "#8a93b8"; ctx.fillText(k.toUpperCase(), x, yy); }
+    ctx.fillStyle = v.startsWith("pirate") ? "#ff9f7f" : "#e8ecff";
+    ctx.fillText(v, x + 130, yy);
+    yy += 20;
+  }
+}
+
+/* ---------- galaxy map ---------- */
+function renderMap(vw, vh) {
+  ctx.fillStyle = "#020208"; ctx.fillRect(0, 0, vw, vh);
+  ctx.fillStyle = "#e8ecff"; ctx.font = "bold 14px 'Lucida Console', monospace";
+  ctx.fillText("GEMINI SECTOR - 14 SYSTEMS OF THE WEB PORT", 20, 28);
+  ctx.font = "11px 'Lucida Console', monospace";
+  ctx.fillStyle = "#8a93b8";
+  ctx.fillText("green = your position \u00b7 red = pirate-reported systems \u00b7 lines = jump links", 20, 46);
+  const pos = {};
+  VS_DATA.systems.forEach((s, i) => {
+    const rng = mulberry32(hashStr(s.name));
+    pos[s.name] = [80 + rng() * 640, 80 + rng() * 460];
+  });
+  ctx.strokeStyle = "#3a4468";
+  for (const [a, b] of VS_DATA.links) {
+    ctx.beginPath();
+    ctx.moveTo(pos[a][0], pos[a][1]); ctx.lineTo(pos[b][0], pos[b][1]);
+    ctx.stroke();
+  }
+  for (const s of VS_DATA.systems) {
+    const [x, y] = pos[s.name];
+    const cur = s.name === GAME.system;
+    const pir = pirateDensity(s.name) > 1;
+    ctx.fillStyle = cur ? "#7fff9f" : pir ? "#ff6a5a" : "#7fa8ff";
+    ctx.beginPath(); ctx.arc(x, y, cur ? 6 : 4, 0, 7); ctx.fill();
+    ctx.fillStyle = cur ? "#7fff9f" : "#c8d0e8";
+    ctx.font = "11px 'Lucida Console', monospace";
+    ctx.fillText(s.name + (pir ? " !" : ""), x + 7, y + 3);
+  }
+  btn(vw - 110, vh - 40, 90, 24, "CLOSE", () => { UI.mapOpen = false; }, { active: true });
+}
+
+/* ============================================================
+   Vega Strike web port - boot: input, audio, main loop,
+   new game, self-test, help
+   ============================================================ */
+
+/* ---------- audio ---------- */
+const SOUND = { on: true, ac: null, engGain: null };
+function audioCtx() {
+  if (!SOUND.on) return null;
+  if (!SOUND.ac) {
+    try { SOUND.ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; }
+  }
+  if (SOUND.ac.state === "suspended") SOUND.ac.resume();
+  return SOUND.ac;
+}
+function blip(freq, dur, vol, type, slideTo) {
+  const ac = audioCtx(); if (!ac) return;
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type || "square"; o.frequency.value = freq;
+  if (slideTo) o.frequency.linearRampToValueAtTime(slideTo, ac.currentTime + dur / 1000);
+  g.gain.setValueAtTime(vol || 0.05, ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur / 1000);
+  o.connect(g).connect(ac.destination);
+  o.start(); o.stop(ac.currentTime + dur / 1000 + 0.02);
+}
+function startEngLoop() {
+  const ac = audioCtx();
+  if (!ac || SOUND.engGain) return;
+  const len = ac.sampleRate * 2;
+  const buf = ac.createBuffer(1, len, ac.sampleRate);
+  const dd = buf.getChannelData(0);
+  for (let k = 0; k < len; k++) dd[k] = (Math.random() * 2 - 1) * 0.5;
+  const src = ac.createBufferSource(); src.buffer = buf; src.loop = true;
+  const lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 140;
+  const g = ac.createGain(); g.gain.value = 0;
+  src.connect(lp).connect(g).connect(ac.destination);
+  src.start();
+  SOUND.engGain = g;
+}
+const sfx = {
+  beep:  () => blip(660, 40, 0.04),
+  bad:   () => blip(180, 150, 0.06, "sawtooth"),
+  zap:   () => blip(940, 60, 0.05, "square", 240),
+  hit:   () => blip(140, 120, 0.08, "sawtooth"),
+  jump:  () => { blip(200, 500, 0.07, "sine", 1400); },
+  win:   () => [523, 659, 784].forEach((f, i) => setTimeout(() => blip(f, 100, 0.06), i * 90)),
+  update(dt) {
+    const ac = audioCtx();
+    if (!ac) return;
+    startEngLoop();
+    const want = (!GAME.docked && GAME.started && !UI.mapOpen && GAME.ship && GAME.ship.fuel > 0)
+      ? 0.03 + 0.05 * (GAME.input ? GAME.input.thrust : 0) : 0;
+    if (SOUND.engGain) SOUND.engGain.gain.value += (want - SOUND.engGain.gain.value) * Math.min(1, dt * 6);
+  },
+};
+
+/* ---------- new game ---------- */
+function newGame() {
+  GAME.t = 0;
+  GAME.system = "newconstantinople";
+  GAME.docked = null; GAME.dockedOpen = false;
+  GAME.missions = []; GAME.missionLog = [];
+  GAME.over = null; GAME.jumpT = undefined; GAME.jumpTo = null;
+  GAME.target = null; GAME.bountyActive = false;
+  PLAYER.credits = 6000;
+  econInit();
+  const nc = SYS["newconstantinople"];
+  const home = nc.bases[0];
+  GAME.ship = newShip("Llama.begin", GAME.system, V.add(home.pos, [22, 6, 14]));
+  ensureBasis(GAME.ship);
+  GAME.ship.fwd = V.norm(V.sub(home.pos, GAME.ship.pos));
+  spawnSystemNPCs(GAME.system);
+  GAME.started = true;
+  simMsg("With Lauktk's death, ownership of this vessel has passed on to you. Make it count.");
+  GAME.msgT = 8;
+}
+
+/* ---------- input ---------- */
+const KEYS = {};
+GAME.input = { pitch: 0, yaw: 0, roll: 0, thrust: 0, boost: false };
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Tab") e.preventDefault();
+  if (UI.mapOpen || UI.helpOpen || UI.aboutOpen) {
+    if (e.key === "Escape" || e.key === "m" || e.key === "M" || e.key === "h" || e.key === "H") {
+      UI.mapOpen = UI.helpOpen = UI.aboutOpen = false;
+    }
+    return;
+  }
+  if (GAME.docked) {
+    if (e.key === "Escape") undock();
+    return;
+  }
+  KEYS[e.key] = true;
+  switch (e.key) {
+    case "f": case "F": fireGun(GAME.ship); break;
+    case "t": case "T": cycleTarget(); break;
+    case "v": case "V":
+      if (GAME.ship.fuel > 0.5) {
+        GAME.ship.spec = !GAME.ship.spec;
+        simMsg(GAME.ship.spec ? "SPEC drive engaged" : "SPEC disengaged");
+        sfx.beep();
+      } else { simMsg("No fuel for SPEC"); }
+      break;
+    case "n": case "N":
+      GAME.ship.assist = !GAME.ship.assist;
+      simMsg(GAME.ship.assist ? "Flight assist ON" : "Flight assist OFF - Newtonian flight");
+      break;
+    case "d": case "D": tryDock(); break;
+    case "j": case "J": tryJump(); break;
+    case "m": case "M": UI.mapOpen = true; break;
+    case "h": case "H": UI.helpOpen = true; break;
+    case "F5": e.preventDefault(); saveGame(); break;
+  }
+});
+document.addEventListener("keyup", (e) => { delete KEYS[e.key]; });
+function cycleTarget() {
+  const enemies = GAME.npcs.filter(n => !n.dead);
+  if (!enemies.length) { GAME.target = null; return; }
+  let k = enemies.findIndex(n => n.id === GAME.target);
+  GAME.target = enemies[(k + 1) % enemies.length].id;
+  sfx.beep();
+}
+canvas.addEventListener("wheel", (e) => {
+  if (GAME.docked) {
+    UI.marketScroll += e.deltaY > 0 ? 3 : -3;
+    e.preventDefault();
+  }
+}, { passive: false });
+canvas.addEventListener("click", (e) => {
+  const rc = canvas.getBoundingClientRect();
+  const mx = (e.clientX - rc.left) * (800 / rc.width), my = (e.clientY - rc.top) * (600 / rc.height);
+  audioCtx();
+  for (const h of UI.hits) {
+    if (mx >= h.x && mx <= h.x + h.w && my >= h.y && my <= h.y + h.h) { h.cb(); return; }
+  }
+});
+
+/* ---------- continuous input ---------- */
+function gatherInput(dt) {
+  const inp = GAME.input;
+  inp.pitch = (KEYS["ArrowUp"] ? -1 : 0) + (KEYS["ArrowDown"] ? 1 : 0);
+  inp.yaw = (KEYS["ArrowLeft"] ? -1 : 0) + (KEYS["ArrowRight"] ? 1 : 0);
+  inp.roll = (KEYS["q"] || KEYS["Q"] ? 1 : 0) + (KEYS["e"] || KEYS["E"] ? -1 : 0);
+  if (KEYS["w"] || KEYS["W"]) inp.thrust = Math.min(1, inp.thrust + dt * 1.5);
+  if (KEYS["s"] || KEYS["S"]) inp.thrust = Math.max(0, inp.thrust - dt * 2);
+  if (KEYS[" "]) inp.boost = true; else inp.boost = false;
+  return inp;
+}
+
+/* ---------- mission hooks for kills ---------- */
+function onNpcKilled(n) {
+  if (n.kind === "pirate") {
+    PLAYER.credits += 700;
+    simMsg("Pirate destroyed - bounty +700 cr");
+    for (const m of GAME.missions) if (m.kind === "bounty" && !m.done) m.killed++;
+    sfx.hit();
+  }
+}
+
+/* ---------- main loop ---------- */
+var lastTs = 0;
+function frame(ts) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, (ts - lastTs) / 1000 || 0.016);
+  lastTs = ts;
+  UI.hits = [];
+  UI.hudShake = Math.max(0, UI.hudShake - dt);
+  const vw = 800, vh = 600;
+
+  if (GAME.started && !GAME.over && !GAME.paused) {
+    const simDt = dt;
+    GAME.t += simDt;
+    if (GAME.msgT > 0) GAME.msgT -= dt;
+    if (!GAME.docked) {
+      const inp = gatherInput(dt);
+      flyShip(GAME.ship, inp, simDt);
+      for (const n of GAME.npcs) npcTick(n, simDt);
+      stepProjectiles(simDt);
+      const dead = GAME.npcs.filter(n => n.dead);
+      if (dead.length) {
+        for (const n of dead) onNpcKilled(n);
+        GAME.npcs = GAME.npcs.filter(n => !n.dead);
+      }
+      stepJump(simDt);
+    }
+    econTick(simDt);
+  }
+  sfx.update(dt);
+
+  // render
+  ctx.save();
+  if (GAME.started) {
+    renderScene(400, 300, vw, vh);
+    renderHUD(vw, vh);
+    if (GAME.docked && GAME.dockedOpen) renderStation(vw, vh);
+    if (UI.mapOpen) renderMap(vw, vh);
+    if (UI.helpOpen) renderHelp(vw, vh);
+    if (GAME.over) renderOver(vw, vh);
+  } else {
+    renderTitle(vw, vh);
+  }
+  ctx.restore();
+}
+
+/* ---------- title ---------- */
+function renderTitle(vw, vh) {
+  ctx.fillStyle = "#020208"; ctx.fillRect(0, 0, vw, vh);
+  const rng = mulberry32(1);
+  for (const st of STARS) {
+    ctx.globalAlpha = 0.3 + st.m * 0.7;
+    ctx.fillStyle = "#dfe4ff";
+    ctx.fillRect((st.d[0] * 0.5 + 0.5) * vw, (st.d[1] * 0.5 + 0.5) * vh, st.m > 0.85 ? 2 : 1, st.m > 0.85 ? 2 : 1);
+  }
+  ctx.globalAlpha = 1;
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#ffb400"; ctx.font = "bold 34px 'Lucida Console', monospace";
+  ctx.fillText("VEGA STRIKE", vw / 2, 180);
+  ctx.fillStyle = "#8a93b8"; ctx.font = "12px 'Lucida Console', monospace";
+  ctx.fillText("WEB PORT", vw / 2, 204);
+  ctx.fillStyle = "#c8d0e8"; ctx.font = "12px 'Lucida Console', monospace";
+  ctx.fillText("A clean-room browser tribute to the open-source space sim", vw / 2, 250);
+  ctx.fillText("engine & assets: GPL (vegastrike) \u00b7 this port: no original engine code", vw / 2, 268);
+  ctx.fillText("trade \u00b7 explore \u00b7 fight \u00b7 upgrade - in the Gemini sector", vw / 2, 286);
+  btn(vw / 2 - 70, 330, 140, 34, "START GAME", () => { audioCtx(); newGame(); }, { active: true });
+  btn(vw / 2 - 70, 376, 140, 30, "LOAD SAVE", () => { audioCtx(); if (loadGame()) {} }, { dark: true });
+  ctx.fillStyle = "#5a6488"; ctx.font = "11px 'Lucida Console', monospace";
+  ctx.fillText("you inherit a Llama and 6,000 credits at New Constantinople", vw / 2, 430);
+  ctx.textAlign = "left";
+}
+
+function renderHelp(vw, vh) {
+  ctx.fillStyle = "rgba(2,4,12,0.92)"; ctx.fillRect(0, 0, vw, vh);
+  ctx.fillStyle = "#0c1124"; ctx.fillRect(150, 40, 500, 510);
+  ctx.strokeStyle = "#4a5478"; ctx.strokeRect(150.5, 40.5, 499, 509);
+  ctx.fillStyle = "#ffb400"; ctx.font = "bold 13px 'Lucida Console', monospace";
+  ctx.fillText("FLIGHT CONTROLS", 170, 66);
+  ctx.font = "11px 'Lucida Console', monospace";
+  const L = [
+    ["W / S", "throttle up / down"],
+    ["Arrow keys", "pitch & yaw \u00b7 Q / E roll"],
+    ["Space", "boost (2.2x thrust)"],
+    ["F", "fire twin guns"],
+    ["T", "cycle target \u00b7 V SPEC drive \u00b7 N flight assist"],
+    ["D", "dock (near station, under 3 Mm/s)"],
+    ["J", "jump (near violet jump point)"],
+    ["M", "galaxy map \u00b7 H this help \u00b7 F5 save (stations)"],
+    ["", ""],
+    ["LOOP", "dock -> market: buy low -> jump/fly -> sell high"],
+    ["", "missions board pays cargo & bounty jobs"],
+    ["", "shipyard: guns, shields, armor, overdrive, SPEC caps"],
+    ["", "pirates hunt in saxtogue, nd-57, rikel, 44-p-im"],
+    ["", "confed customs seize contraband (pirate dens sell it)"],
+  ];
+  let yy = 90;
+  for (const [k, v] of L) {
+    ctx.fillStyle = "#7fbfff"; ctx.fillText(k, 170, yy);
+    ctx.fillStyle = "#c8d0e8"; ctx.fillText(v, 280, yy);
+    yy += 20;
+  }
+  btn(360, 510, 90, 24, "CLOSE", () => { UI.helpOpen = false; }, { active: true });
+}
+
+function renderOver(vw, vh) {
+  ctx.fillStyle = "rgba(60,0,0,0.75)"; ctx.fillRect(0, 0, vw, vh);
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#ff6a5a"; ctx.font = "bold 26px 'Lucida Console', monospace";
+  ctx.fillText("YOUR HULL IS GONE", vw / 2, 260);
+  ctx.fillStyle = "#c8d0e8"; ctx.font = "12px 'Lucida Console', monospace";
+  ctx.fillText("The Gemini sector will write your name in the ledger anyway.", vw / 2, 292);
+  ctx.textAlign = "left";
+  btn(vw / 2 - 120, 330, 110, 28, "RESTART", () => { newGame(); }, { active: true });
+  btn(vw / 2 + 10, 330, 110, 28, "TITLE", () => { GAME.started = false; GAME.over = null; }, { dark: true });
+}
+
+/* ---------- JS self-test (same checks as verify_game.py) ---------- */
+function simSelfTest() {
+  const okConn = (() => {
+    const adj = {}; VS_DATA.systems.forEach(s => adj[s.name] = []);
+    VS_DATA.links.forEach(([a, b]) => { adj[a].push(b); adj[b].push(a); });
+    const seen = new Set(["newconstantinople"]), st = ["newconstantinople"];
+    while (st.length) for (const n of adj[st.pop()]) if (!seen.has(n)) { seen.add(n); st.push(n); }
+    return seen.size === VS_DATA.systems.length;
+  })();
+  const bid = "newconstantinople::" + SYS["newconstantinople"].bases[0].name;
+  econInit();
+  const g = VS_DATA.goods.find(g => !g.cat.startsWith("Contraband"));
+  const okMarket = goodPrice(bid, g.file) > 0 && baseStock0(bid, g.file) > 0;
+  const ok = okConn && okMarket;
+  console.log("[VS self-test] connectivity:", okConn, "| market:", okMarket, "|", ok ? "PASSED" : "FAILED");
+  return ok;
+}
+
+/* ---------- boot ---------- */
+makeTextures();
+makeStars();
+econInit();
+UI.coreOK = simSelfTest();
+requestAnimationFrame(frame);
+// manual single-frame paint (headless test harness / debugging)
+window.renderOne = function() { frame(performance.now()); GAME.msgT = Math.max(0, GAME.msgT - 0.05); };
+
+</script>
+</body>
+</html>
